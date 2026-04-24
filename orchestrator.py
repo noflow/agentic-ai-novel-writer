@@ -15,7 +15,7 @@ from specialists import (
     create_researcher, create_writer, create_critic,
     create_story_director, create_novel_writer, create_story_critic,
     create_humanizer, create_summarizer, create_formatter,
-    create_continuity_checker,
+    create_continuity_checker, create_story_tracker,
 )
 from agent import Agent
 from providers import BaseLLMProvider
@@ -47,7 +47,7 @@ def _scan_novel_files():
     output_dir = _get_output_dir()
     all_files = sorted([f.name for f in output_dir.iterdir() if f.is_file()])
 
-    bible_files = [f for f in all_files if "bible" in f.lower() and f.endswith(".txt")]
+    outline_files = [f for f in all_files if "outline" in f.lower() and f.endswith(".txt")]
     story_so_far = [f for f in all_files if "story_so_far" in f.lower()]
 
     # Chapter files: .txt, contains ch/chapter, excludes meta files
@@ -55,7 +55,7 @@ def _scan_novel_files():
                      if f.endswith(".txt")
                      and ("ch" in f.lower() or "chapter" in f.lower())
                      and not any(x in f.lower() for x in
-                                ["summary", "review", "formatted", "story_so_far", "bible"])]
+                                ["summary", "review", "formatted", "story_so_far", "outline"])]
 
     # Extract actual chapter numbers
     chapter_map = {}  # {chapter_num: filename}
@@ -83,7 +83,7 @@ def _scan_novel_files():
 
     return {
         "all_files": all_files,
-        "bible": bible_files[0] if bible_files else None,
+        "outline": outline_files[0] if outline_files else None,
         "story_so_far": story_so_far[0] if story_so_far else None,
         "chapters": chapter_files,
         "chapter_map": chapter_map,
@@ -110,6 +110,7 @@ class Orchestrator:
         self._summarizer = None
         self._formatter = None
         self._continuity_checker = None
+        self._story_tracker = None
 
         self.pipelines = {
             "research_only": self._research_only,
@@ -164,6 +165,12 @@ class Orchestrator:
             self._continuity_checker = create_continuity_checker(provider=self._provider, model=self._model)
         return self._continuity_checker
 
+    @property
+    def story_tracker(self):
+        if self._story_tracker is None:
+            self._story_tracker = create_story_tracker(provider=self._provider, model=self._model)
+        return self._story_tracker
+
     def run(self, pipeline, task):
         if pipeline not in self.pipelines:
             available = ", ".join(self.pipelines.keys())
@@ -206,17 +213,18 @@ class Orchestrator:
     # ---------------------------------------------------------------
     def _novel_plan(self, task):
         plan = self._run_agent(self.story_director,
-            f"Create a complete story bible for:\n\n{task}\n\n"
+            f"Create a complete novel outline for:\n\n{task}\n\n"
             f"Choose a compelling title. Give each chapter a creative title. "
-            f"Define file naming. Save the bible.")
-        return {"story_bible": plan}
+            f"Define file naming. Save the outline.\n"
+            f"IMPORTANT: Calculate the correct number of chapters to hit 70,000-100,000 word target.")
+        return {"novel_outline": plan}
 
     def _novel_chapter(self, task):
         """Write the next missing chapter with full pipeline and continuity checking."""
 
         # --- Scan and determine chapter number ---
         info = _scan_novel_files()
-        bible = info["bible"]
+        outline = info["outline"]
         chapters = info["chapters"]
         chapter_map = info["chapter_map"]
         existing_nums = info["existing_nums"]
@@ -247,7 +255,7 @@ class Orchestrator:
 
         context = (
             f"=== CHAPTER STATUS ===\n"
-            f"Bible: {bible or 'NOT FOUND'}\n"
+            f"Outline: {outline or 'NOT FOUND'}\n"
             f"Chapters completed: {existing_nums if existing_nums else 'none'}\n"
             f"{'MISSING chapters: ' + str(gaps) if gaps else 'No gaps -- sequence is complete so far'}\n"
             f"YOUR ASSIGNMENT: Write Chapter {ch_num}\n"
@@ -265,7 +273,7 @@ class Orchestrator:
 
         draft = self._run_agent(self.novel_writer,
             f"{context}\n"
-            f"Read the story bible ('{bible}') and find the outline for Chapter {ch_num}.\n"
+            f"Read the novel outline ('{outline}') and find the outline for Chapter {ch_num}.\n"
             f"{'Read ' + story_so_far + ' for previous chapter context.' if story_so_far else ''}\n"
             f"Write Chapter {ch_num}. Include 'ch{ch_num}' in the filename.\n"
             f"Additional: {task}")
@@ -286,7 +294,7 @@ class Orchestrator:
         review = self._run_agent(self.story_critic,
             f"Review ONLY '{chapter_file}' (Chapter {ch_num}).\n"
             f"Summary:\n{summary}\n\n"
-            f"Read bible '{bible}' for reference. Save review as 'review_{chapter_file}'")
+            f"Read outline '{outline}' for reference. Save review as 'review_{chapter_file}'")
 
         # --- Step 4: Revise ---
         self._log(f"\n  Step 4: Revising Chapter {ch_num}")
@@ -303,21 +311,39 @@ class Orchestrator:
             f"Summary:\n{summary}\n\n"
             f"Read '{chapter_file}', fix AI patterns, overwrite '{chapter_file}'.")
 
-        # --- Step 6: Continuity Check ---
-        self._log(f"\n  Step 6: Continuity Check on Chapter {ch_num}")
+        # --- Step 6: Story Track (Arc Compliance) ---
+        self._log(f"\n  Step 6: Story Track - Verifying Arc Compliance for Chapter {ch_num}")
+
+        arc_check = self._run_agent(self.story_tracker,
+            f"Verify Chapter {ch_num} follows the planned novel arc.\n"
+            f"Outline: '{outline}'\n"
+            f"Story so far: {story_so_far or 'none'}\n"
+            f"Current chapter: {chapter_file}\n\n"
+            f"Check:\n"
+            f"1. Does this chapter belong to the correct act (Beginning/Middle/End)?\n"
+            f"2. Is the story progressing through the arc as planned?\n"
+            f"3. Any drift from the planned story structure?\n"
+            f"4. Are subplots being developed appropriately?\n"
+            f"5. Pacing: too fast (skipping beats) or too slow (filler)?\n\n"
+            f"Read the outline and story_so_far FIRST, then read the chapter.\n"
+            f"Save tracker report as 'tracker_{chapter_file}'.\n"
+            f"If drift is detected, provide specific recommendations to get back on track.")
+
+        # --- Step 7: Continuity Check ---
+        self._log(f"\n  Step 7: Continuity Check on Chapter {ch_num}")
 
         # Get the previous chapter file for transition checking
         prev_ch_file = chapter_map.get(ch_num - 1, None) if ch_num > 1 else None
 
         continuity = self._run_agent(self.continuity_checker,
             f"Check Chapter {ch_num} (file: '{chapter_file}') for completeness.\n"
-            f"Bible: '{bible}'\n"
+            f"Outline: '{outline}'\n"
             f"{'Previous chapter: ' + prev_ch_file if prev_ch_file else 'This is the first chapter.'}\n"
             f"{'Story so far: ' + story_so_far if story_so_far else ''}\n\n"
             f"Verify:\n"
             f"1. Chapter ends with a COMPLETE sentence (no cut-off mid-sentence)\n"
             f"2. Chapter has a proper ending that hooks into the next chapter\n"
-            f"3. Chapter matches the bible's outline for Chapter {ch_num}\n"
+            f"3. Chapter matches the outline for Chapter {ch_num}\n"
             f"4. {'Transition from Chapter ' + str(ch_num-1) + ' is smooth' if prev_ch_file else 'Opening hooks the reader'}\n"
             f"5. No continuity errors with previous chapters\n"
             f"6. All scenes are complete (no unfinished scenes)\n\n"
@@ -326,7 +352,7 @@ class Orchestrator:
             f"Save a continuity report as 'continuity_{chapter_file}'.")
 
         # --- Step 7: Format to .docx ---
-        self._log(f"\n  Step 7: Formatting Chapter {ch_num} to Word")
+        self._log(f"\n  Step 8: Formatting Chapter {ch_num} to Word")
         docx_name = chapter_file.replace(".txt", ".docx")
         formatted = self._run_agent(self.formatter,
             f"Convert ONLY '{chapter_file}' to Word.\n"
@@ -341,6 +367,7 @@ class Orchestrator:
             "review": review,
             "revised": revision,
             "humanized": humanized,
+            "arc_check": arc_check,
             "continuity": continuity,
             "formatted": formatted,
         }
@@ -355,14 +382,15 @@ class Orchestrator:
 
         self._log("\n  Phase 2: Story Planning")
         plan = self._run_agent(self.story_director,
-            f"Create a story bible for:\n\n{task}\n\nResearch:\n{research}\n\n"
+            f"Create a novel outline for:\n\n{task}\n\nResearch:\n{research}\n\n"
             f"Choose a TITLE. Give each chapter a creative title. "
+            f"Calculate chapter count for 70,000-100,000 word target. "
             f"Define file naming. List all filenames.")
 
         self._log("\n  Phase 3: Writing Chapter 1")
         files_before = set(f.name for f in _get_output_dir().iterdir())
         chapter_1 = self._run_agent(self.novel_writer,
-            f"Read the story bible, then write Chapter 1. "
+            f"Read the novel outline, then write Chapter 1. "
             f"Include 'ch1' in the filename. Hook the reader immediately.")
 
         ch1_file = self._detect_new_chapter(files_before, [], 1)
@@ -375,7 +403,7 @@ class Orchestrator:
         self._log("\n  Phase 5: Reviewing")
         review = self._run_agent(self.story_critic,
             f"Review ONLY '{ch1_file}'.\nSummary:\n{summary}\n\n"
-            f"Read bible for reference. Save review.")
+            f"Read outline for reference. Save review.")
 
         self._log("\n  Phase 6: Revising")
         revision = self._run_agent(self.novel_writer,
@@ -386,13 +414,25 @@ class Orchestrator:
         humanized = self._run_agent(self.humanizer,
             f"Humanize ONLY '{ch1_file}'.\nSummary:\n{summary}\n\n"
             f"Read '{ch1_file}', fix AI patterns, overwrite.")
-
-        self._log("\n  Phase 8: Continuity Check")
+        self._log("\n  Phase 8: Story Track - Arc Compliance")
+        arc_check = self._run_agent(self.story_tracker,
+            f"Verify Chapter 1 follows the planned novel arc.\n"
+            f"Outline: (created in Phase 2)\n"
+            f"Current chapter: {ch1_file}\n\n"
+            f"Check:\n"
+            f"1. Does this chapter properly set up the Beginning (Act 1)?\n"
+            f"2. Is the inciting incident present?\n"
+            f"3. Are main characters introduced?\n"
+            f"4. Is the world established?\n"
+            f"5. Does it hook the reader and set up the story goal?\n\n"
+            f"Read the outline (created in Phase 2) and the chapter.\n"
+            f"Save tracker report as 'tracker_{ch1_file}'.")
+        self._log("\n  Phase 9: Continuity Check")
         continuity = self._run_agent(self.continuity_checker,
             f"Check Chapter 1 ('{ch1_file}') for completeness.\n"
-            f"Read the bible for reference.\n"
+            f"Read the outline for reference.\n"
             f"Verify: complete sentences, proper ending with hook, "
-            f"no unfinished scenes, matches bible outline.\n"
+            f"no unfinished scenes, matches outline.\n"
             f"Fix any issues by overwriting '{ch1_file}'.\n"
             f"Save report as 'continuity_{ch1_file}'.")
 
@@ -403,11 +443,12 @@ class Orchestrator:
             f"Add title page with novel title, then Chapter 1.")
 
         return {
-            "research": research, "story_bible": plan,
+            "research": research, "novel_outline": plan,
             "chapter_1_file": ch1_file,
             "chapter_1_draft": chapter_1, "chapter_1_summary": summary,
             "chapter_1_review": review, "chapter_1_revised": revision,
-            "chapter_1_humanized": humanized, "chapter_1_continuity": continuity,
+            "chapter_1_humanized": humanized, "chapter_1_arc_check": arc_check,
+            "chapter_1_continuity": continuity,
             "chapter_1_formatted": formatted,
         }
 
@@ -430,7 +471,7 @@ class Orchestrator:
                       if f.is_file() and f.suffix == ".txt"
                       and f.name not in existing_chapters
                       and not any(x in f.name.lower() for x in
-                                 ["summary", "review", "bible", "story_so_far", "continuity"])]
+                                 ["summary", "review", "outline", "story_so_far", "continuity", "tracker"])]
         if candidates:
             candidates.sort(key=lambda x: x[1], reverse=True)
             return candidates[0][0]

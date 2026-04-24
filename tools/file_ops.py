@@ -233,7 +233,7 @@ class ListFilesTool(BaseTool):
         "properties": {
             "filter": {
                 "type": "string",
-                "description": "Optional: filter files containing this text (e.g. 'ch' for chapters, 'summary' for summaries, 'bible' for story bibles)",
+                "description": "Optional: filter files containing this text (e.g. 'ch' for chapters, 'summary' for summaries, 'outline' for novel outlines)",
             },
         },
     }

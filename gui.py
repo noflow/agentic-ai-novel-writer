@@ -528,7 +528,7 @@ class AgenticGUI:
                 from agent import Agent
                 from tools import create_default_registry
                 from specialists import create_researcher, create_writer, create_critic
-                from specialists import create_story_director, create_novel_writer, create_story_critic, create_humanizer, create_summarizer, create_formatter, create_continuity_checker
+                from specialists import create_story_director, create_novel_writer, create_story_critic, create_humanizer, create_summarizer, create_formatter, create_continuity_checker, create_story_tracker
                 from orchestrator import Orchestrator
                 from config import list_available_providers, PROVIDER
 
@@ -544,6 +544,7 @@ class AgenticGUI:
                     "summarizer": create_summarizer(),
                     "formatter": create_formatter(),
                     "continuity_checker": create_continuity_checker(),
+                    "story_tracker": create_story_tracker(),
                 }
                 self.orchestrator = Orchestrator(verbose=True)
 
@@ -574,7 +575,7 @@ class AgenticGUI:
             from agent import Agent
             from tools import create_default_registry
             from specialists import (create_researcher, create_writer, create_critic,
-                                     create_story_director, create_novel_writer, create_story_critic, create_humanizer, create_summarizer, create_formatter, create_continuity_checker)
+                                     create_story_director, create_novel_writer, create_story_critic, create_humanizer, create_summarizer, create_formatter, create_continuity_checker, create_story_tracker)
             from orchestrator import Orchestrator
             from config import create_provider
 
@@ -596,6 +597,7 @@ class AgenticGUI:
                 "summarizer": create_summarizer(provider=provider, model=model),
                 "formatter": create_formatter(provider=provider, model=model),
                 "continuity_checker": create_continuity_checker(provider=provider, model=model),
+                "story_tracker": create_story_tracker(provider=provider, model=model),
             }
             self.orchestrator = Orchestrator(verbose=True, provider=provider, model=model)
             self._log_console(f"All agents now using {provider_name} ({model})", "success")
