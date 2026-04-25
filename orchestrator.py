@@ -27,6 +27,15 @@ def _get_output_dir() -> Path:
     return out
 
 
+# --- Chapter Writing Constants ---
+CHUNK_MIN_CHARS = 10_000
+CHUNK_MAX_CHARS = 12_000
+CHAPTER_MIN_CHARS = 36_000
+CHAPTER_MAX_CHARS = 45_000
+CHUNKS_PER_CHAPTER = 4
+MAX_CHUNK_RETRIES = 3
+
+
 def _extract_chapter_num(filename: str) -> int | None:
     """Extract chapter number from a filename like 'novel_ch3_title.txt' or 'chapter_3.txt'."""
     patterns = [
@@ -352,8 +361,17 @@ class Orchestrator:
         # Log the character count result
         self._log(f"  Character count check: {char_count_check[:200]}...")
         
+        # Extract character count from response
+        try:
+            # Try to find a number in the response
+            import re
+            numbers = re.findall(r'\d+', char_count_check)
+            count = int(numbers[0]) if numbers else 0
+        except:
+            count = 0
+        
         # If chapter is too short, expand it
-        if "under 36000" in char_count_check.lower() or "needs" in char_count_check.lower():
+        if count > 0 and count < 36000:
             self._log(f"  Chapter too short - expanding...")
             expansion = self._run_agent(self.novel_writer,
                 f"Expand '{chapter_file}' to meet 36,000-45,000 character target.\n"
@@ -476,7 +494,15 @@ class Orchestrator:
         
         self._log(f"  Character count check: {char_count_check[:200]}...")
         
-        if "under 36000" in char_count_check.lower() or "needs" in char_count_check.lower():
+        # Extract character count from response
+        try:
+            import re
+            numbers = re.findall(r'\d+', char_count_check)
+            count = int(numbers[0]) if numbers else 0
+        except:
+            count = 0
+        
+        if count > 0 and count < 36000:
             self._log(f"  Chapter too short - expanding...")
             expansion = self._run_agent(self.novel_writer,
                 f"Expand '{ch1_file}' to meet 36,000-45,000 character target.\n"
@@ -667,6 +693,200 @@ class Orchestrator:
         self._log(f"\n  <- {agent.name} finished ({len(response)} chars)")
         _time.sleep(2)
         return response
+
+    # --- Chapter Validation Helpers ---
+    def _count_file_chars(self, filename: str) -> int:
+        path = _get_output_dir() / filename
+        if not path.exists():
+            return 0
+        return len(path.read_text(encoding="utf-8"))
+
+    def _validate_count(self, count: int, minimum: int, maximum: int) -> tuple[bool, str]:
+        if count < minimum:
+            return False, f"UNDER by {minimum - count} characters"
+        if count > maximum:
+            return False, f"OVER by {count - maximum} characters"
+        return True, "PASS"
+
+    def _write_validated_chunk(
+        self,
+        ch_num: int,
+        chunk_num: int,
+        chapter_file: str,
+        outline: str,
+        story_so_far: str | None,
+        task: str,
+    ):
+        before_count = self._count_file_chars(chapter_file)
+
+        for attempt in range(1, MAX_CHUNK_RETRIES + 1):
+            mode = "write_file" if chunk_num == 1 and before_count == 0 else "append_file"
+
+            prompt = f"""
+Write ONLY Chunk {chunk_num} of Chapter {ch_num}.
+
+STRICT LENGTH RULE:
+- This chunk MUST be 10,000–12,000 characters.
+- Do not write less.
+- Do not write more.
+- End the chunk at a natural scene beat.
+- Do not summarize.
+- Do not explain.
+
+File: {chapter_file}
+Tool to use: {mode}
+
+Context:
+- Outline file: {outline}
+- Story so far: {story_so_far or "none"}
+- User task: {task}
+
+IMPORTANT:
+After writing this chunk, stop. Do not write the next chunk.
+"""
+
+            result = self._run_agent(self.novel_writer, prompt)
+
+            after_count = self._count_file_chars(chapter_file)
+            chunk_count = after_count - before_count
+
+            ok, status = self._validate_count(
+                chunk_count,
+                CHUNK_MIN_CHARS,
+                CHUNK_MAX_CHARS,
+            )
+
+            self._log(
+                f"  Chunk {chunk_num} attempt {attempt}: "
+                f"{chunk_count} chars — {status}"
+            )
+
+            if ok:
+                return {
+                    "chunk": chunk_num,
+                    "characters": chunk_count,
+                    "status": "passed",
+                    "agent_result": result,
+                }
+
+            fix_prompt = f"""
+Chunk {chunk_num} of Chapter {ch_num} failed validation.
+
+Current chunk length: {chunk_count} characters.
+Required: 10,000–12,000 characters.
+Status: {status}
+
+You must fix ONLY the latest chunk.
+
+Instructions:
+- Read {chapter_file}.
+- Identify the latest chunk you just wrote.
+- If too short, expand that chunk with more scene detail, action, dialogue, internal thought, and sensory description.
+- If too long, trim that chunk while preserving plot.
+- Rewrite the chapter file so Chunk {chunk_num} becomes 10,000–12,000 characters.
+- Do NOT alter earlier chunks unless needed for smooth transition.
+- Do NOT continue to the next chunk.
+"""
+
+            self._run_agent(self.novel_writer, fix_prompt)
+
+            after_fix_count = self._count_file_chars(chapter_file)
+            chunk_count = after_fix_count - before_count
+
+            ok, status = self._validate_count(
+                chunk_count,
+                CHUNK_MIN_CHARS,
+                CHUNK_MAX_CHARS,
+            )
+
+            self._log(
+                f"  Chunk {chunk_num} fix attempt {attempt}: "
+                f"{chunk_count} chars — {status}"
+            )
+
+            if ok:
+                return {
+                    "chunk": chunk_num,
+                    "characters": chunk_count,
+                    "status": "passed_after_fix",
+                    "agent_result": result,
+                }
+
+        raise ValueError(
+            f"Chunk {chunk_num} failed after {MAX_CHUNK_RETRIES} attempts. "
+            f"Last count: {chunk_count} characters."
+        )
+
+    def _write_chapter_in_validated_chunks(
+        self,
+        ch_num: int,
+        chapter_file: str,
+        outline: str,
+        story_so_far: str | None,
+        task: str,
+    ):
+        chunk_results = []
+
+        for chunk_num in range(1, CHUNKS_PER_CHAPTER + 1):
+            self._log(f"\n  Writing validated Chunk {chunk_num}/{CHUNKS_PER_CHAPTER}")
+            result = self._write_validated_chunk(
+                ch_num=ch_num,
+                chunk_num=chunk_num,
+                chapter_file=chapter_file,
+                outline=outline,
+                story_so_far=story_so_far,
+                task=task,
+            )
+            chunk_results.append(result)
+
+        total_count = self._count_file_chars(chapter_file)
+        ok, status = self._validate_count(
+            total_count,
+            CHAPTER_MIN_CHARS,
+            CHAPTER_MAX_CHARS,
+        )
+
+        self._log(f"\n  Final chapter count: {total_count} chars — {status}")
+
+        if not ok:
+            final_fix_prompt = f"""
+Chapter {ch_num} failed final character validation.
+
+Current total: {total_count} characters.
+Required total: 36,000–45,000 characters.
+Status: {status}
+
+Fix the chapter file: {chapter_file}
+
+Rules:
+- Preserve all four chunks.
+- Do not remove major plot events.
+- If under, expand weak or thin scenes.
+- If over, trim repetition and excess description.
+- Final chapter must be 36,000–45,000 characters.
+- Overwrite the same file.
+"""
+
+            self._run_agent(self.novel_writer, final_fix_prompt)
+
+            total_count = self._count_file_chars(chapter_file)
+            ok, status = self._validate_count(
+                total_count,
+                CHAPTER_MIN_CHARS,
+                CHAPTER_MAX_CHARS,
+            )
+
+            if not ok:
+                raise ValueError(
+                    f"Chapter {ch_num} still failed validation: "
+                    f"{total_count} characters — {status}"
+                )
+
+        return {
+            "chapter_file": chapter_file,
+            "total_characters": total_count,
+            "chunks": chunk_results,
+        }
 
     def _log(self, message):
         if self.verbose:

@@ -82,8 +82,6 @@ class ReadFileTool(BaseTool):
             with open(resolved, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            if len(content) > 10_000:
-                content = content[:10_000] + "\n\n... [truncated -- file is very large]"
 
             return content
 

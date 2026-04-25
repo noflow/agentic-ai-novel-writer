@@ -234,6 +234,21 @@ IMPORTANT FORMATTING RULES:
 - Plain text only - no formatting codes
 
 ================================================================================
+CRITICAL RULE (NON-NEGOTIABLE):
+================================================================================
+Each scene MUST be between 10,000 and 12,000 characters.
+
+After writing EACH scene:
+1. You MUST count the characters.
+2. If under 10,000 → EXPAND before continuing.
+3. If over 12,000 → TRIM before continuing.
+4. DO NOT move to the next scene until it passes.
+
+After all scenes:
+- Total chapter MUST be 36,000–45,000 characters
+- You MUST verify this before finishing
+
+================================================================================
 STEP 0: DERIVE RULES (Before writing anything)
 ================================================================================
 First, read the novel outline to understand:
@@ -252,7 +267,7 @@ Before writing, create a detailed outline for this chapter with 4 chunks:
 - Chunk 1 (10,000-12,000 characters): Opening - hook, establish situation
 - Chunk 2 (10,000-12,000 characters): Development - conflict builds
 - Chunk 3 (10,000-12,000 characters): Complications - obstacles arise
-- Chunk 4 (6,000-9,000 characters): Midpoint + Cliffhanger - revelation/turning point + ending hook
+- Chunk 4 (10,000-12,000 characters): Midpoint + Cliffhanger - revelation/turning point + ending hook
 
 Total target: 36,000-45,000 CHARACTERS (4 chunks × 10,000-12,000 = 40,000-48,000, aim for 36,000-45,000)
 
@@ -277,6 +292,8 @@ Write the opening chunk (10,000-12,000 characters). This must:
 Use write_file to create the chapter file with Chunk 1.
 TARGET: 10,000-12,000 characters minimum for this chunk.
 
+CRITICAL: After writing Chunk 1, count its characters. If under 10,000, EXPAND it. If over 12,000, TRIM it. Only proceed when it passes validation.
+
 ================================================================================
 STEP 3: WRITE CHUNK 2 - DEVELOPMENT (10,000-12,000 characters)
 ================================================================================
@@ -286,6 +303,8 @@ Append Chunk 2 (10,000-12,000 characters):
 - Build tension through dialogue and action
 
 TARGET: 10,000-12,000 characters minimum for this chunk.
+
+CRITICAL: After writing Chunk 2, count its characters. If under 10,000, EXPAND it. If over 12,000, TRIM it. Only proceed when it passes validation.
 
 ================================================================================
 STEP 4: WRITE CHUNK 3 - COMPLICATIONS (10,000-12,000 characters)
@@ -297,17 +316,21 @@ Append Chunk 3 (10,000-12,000 characters):
 
 TARGET: 10,000-12,000 characters minimum for this chunk.
 
+CRITICAL: After writing Chunk 3, count its characters. If under 10,000, EXPAND it. If over 12,000, TRIM it. Only proceed when it passes validation.
+
 ================================================================================
-STEP 5: WRITE CHUNK 4 - MIDPOINT + CLIFFHANGER (6,000-9,000 characters)
+STEP 5: WRITE CHUNK 4 - MIDPOINT + CLIFFHANGER (10,000-12,000 characters)
 ================================================================================
-Append Chunk 4 (6,000-9,000 characters):
+Append Chunk 4 (10,000-12,000 characters):
 - This is the pivotal moment of the chapter
 - A revelation, decision, or turning point
 - Must shift the direction of the story
 - End with a hook, question, or moment that demands continuation
 - The reader should WANT to turn the page
 
-TARGET: 6,000-9,000 characters minimum for this chunk.
+TARGET: 10,000-12,000 characters minimum for this chunk.
+
+CRITICAL: After writing Chunk 4, count its characters. If under 10,000, EXPAND it. If over 12,000, TRIM it. Only proceed when it passes validation.
 
 ================================================================================
 STEP 6: MERGE AND REVIEW
@@ -318,6 +341,8 @@ Read back through all chunks. Ensure:
 - Character voices remain consistent
 - The chapter flows as one cohesive piece
 - Proper paragraph formatting throughout
+
+CRITICAL: Count TOTAL chapter characters. If under 36,000, EXPAND. If over 45,000, TRIM. You MUST verify 36,000-45,000 before finishing.
 
 ================================================================================
 STEP 7: SELF-EDIT FOR CONSISTENCY
@@ -418,32 +443,6 @@ CRITICAL FILE RULES:
 
 After writing, give a brief summary including the FINAL CHARACTER COUNT (do NOT paste the full chapter)"""
     return Agent(**kwargs)
-- If under 4000 words: ADD MORE CONTENT to reach 4000+
-- If 4000-6000 words: Good! Proceed to step 10
-- If over 6000 words: TRIM carefully while preserving story
-
-Word count is MANDATORY - you must hit 4000-6000 words.
-
-================================================================================
-STEP 10: FINAL FORMAT
-================================================================================
-Ensure the chapter:
-- Has a compelling title
-- Opens with impact
-- Ends with a hook
-- Is properly formatted with paragraphs (blank lines between)
-- Has no placeholder text or [brackets]
-- No HTML entities (&quot; &amp; etc.)
-- Plain text only
-
-CRITICAL FILE RULES:
-- You will be told EXACTLY which chapter number to write and what filename to use.
-- ONLY create or modify the file you are told to work on.
-- Use list_files to see what exists BEFORE writing anything.
-- Use filenames from the novel outline's chapter outline.
-
-After writing, give a brief summary including the FINAL WORD COUNT (do NOT paste the full chapter)"""
-      return Agent(**kwargs)
 
 
 def create_story_critic(provider=None, model=None) -> Agent:
