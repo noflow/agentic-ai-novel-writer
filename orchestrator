@@ -230,7 +230,7 @@ class Orchestrator:
         return {"novel_outline": plan}
 
     def _novel_chapter(self, task):
-        """Write the next missing chapter using strict chunk validation."""
+        """Write the next missing chapter with full pipeline and continuity checking."""
 
         # --- Scan and determine chapter number ---
         info = _scan_novel_files()
@@ -245,41 +245,39 @@ class Orchestrator:
         if not outline:
             self._log("\n  WARNING: No novel outline found!")
             self._log("  Creating outline first...")
-
+            
+            # Extract story concept from task
             story_concept = task
             if "chapter" in task.lower():
+                # If task is just "write chapter 5", we need context
                 story_concept = "A novel about: " + task
-
-            research = self._run_agent(
-                self.researcher,
+            
+            research = self._run_agent(self.researcher,
                 f"Research background for: {story_concept}\n"
-                f"Focus on setting, history, culture, technical details."
-            )
-
-            self._run_agent(
-                self.story_director,
+                f"Focus on setting, history, culture, technical details.")
+            
+            plan = self._run_agent(self.story_director,
                 f"Create a complete novel outline for:\n\n{story_concept}\n\nResearch:\n{research}\n\n"
                 f"Choose a TITLE. Calculate the correct number of chapters "
-                f"to hit 70,000-100,000 word target using 36,000-45,000 characters per chapter.\n"
-                f"Define file naming. List all chapter filenames."
-            )
-
+                f"to hit 70,000-100,000 word target (4000-6000 words per chapter).\n"
+                f"Define file naming. List all chapter filenames.")
+            
+            # Re-scan for the new outline
             info = _scan_novel_files()
             outline = info["outline"]
-            story_so_far = info["story_so_far"]
             self._log(f"  Outline created: {outline}")
 
-        # --- Determine target chapter ---
+        # Check if user specified a chapter number
         user_ch_match = re.search(r'chapter\s*(\d+)', task.lower())
         if user_ch_match:
             ch_num = int(user_ch_match.group(1))
             if ch_num in chapter_map:
                 self._log(f"\n  WARNING: Chapter {ch_num} already exists: {chapter_map[ch_num]}")
-                self._log("  It will be rewritten as requested.")
+                self._log(f"  It will be rewritten as requested.")
         else:
             ch_num = info["next_num"]
 
-        self._log("\n  === CHAPTER SEQUENCING ===")
+        self._log(f"\n  === CHAPTER SEQUENCING ===")
         self._log(f"  Chapters found: {existing_nums if existing_nums else 'none'}")
         if gaps:
             self._log(f"  GAPS DETECTED: chapters {gaps} are missing!")
@@ -287,17 +285,9 @@ class Orchestrator:
         else:
             self._log(f"  Writing next: Chapter {ch_num}")
 
-        protected = "\n".join(
-            f"  - {chapter_map[n]} (Chapter {n} -- DO NOT MODIFY)"
-            for n in existing_nums if n != ch_num
-        )
-
-        chapter_file = chapter_map.get(ch_num) or f"chapter_ch{ch_num}.txt"
-
-        # If rewriting an existing chapter, clear that file first so chunk counts
-        # are based only on the new validated draft.
-        if ch_num in chapter_map:
-            self._write_file_text(chapter_file, "")
+        # Build protected file list
+        protected = "\n".join(f"  - {chapter_map[n]} (Chapter {n} -- DO NOT MODIFY)"
+                              for n in existing_nums if n != ch_num)
 
         context = (
             f"=== CHAPTER STATUS ===\n"
@@ -305,74 +295,95 @@ class Orchestrator:
             f"Chapters completed: {existing_nums if existing_nums else 'none'}\n"
             f"{'MISSING chapters: ' + str(gaps) if gaps else 'No gaps -- sequence is complete so far'}\n"
             f"YOUR ASSIGNMENT: Write Chapter {ch_num}\n"
-            f"Target file: {chapter_file}\n"
             f"Running summary: {story_so_far or 'none'}\n"
             f"\nPROTECTED FILES (DO NOT MODIFY):\n{protected}\n"
             f"\nRULES:\n"
-            f"- Write exactly {CHUNKS_PER_CHAPTER} chunks.\n"
-            f"- Each chunk must be {CHUNK_MIN_CHARS:,}-{CHUNK_MAX_CHARS:,} characters.\n"
-            f"- Final chapter must be {CHAPTER_MIN_CHARS:,}-{CHAPTER_MAX_CHARS:,} characters.\n"
-            f"- NEVER touch protected files listed above.\n"
+            f"- Create a NEW file for Chapter {ch_num}\n"
+            f"- The filename MUST contain 'ch{ch_num}' so it can be detected\n"
+            f"- NEVER touch any protected files listed above\n"
         )
 
-        # --- Step 1: Write in validated chunks ---
-        self._log(f"\n  Step 1: Writing Chapter {ch_num} in validated chunks")
-        draft = self._write_chapter_in_validated_chunks(
-            ch_num=ch_num,
-            chapter_file=chapter_file,
-            outline=outline,
-            story_so_far=story_so_far,
-            task=f"{context}\nAdditional: {task}",
-        )
+        # --- Step 1: Write ---
+        self._log(f"\n  Step 1: Writing Chapter {ch_num}")
+        files_before = set(f.name for f in _get_output_dir().iterdir())
+
+        draft = self._run_agent(self.novel_writer,
+            f"{context}\n"
+            f"Read the novel outline ('{outline}') and find the outline for Chapter {ch_num}.\n"
+            f"{'Read ' + story_so_far + ' for previous chapter context.' if story_so_far else ''}\n"
+            f"Write Chapter {ch_num}. Include 'ch{ch_num}' in the filename.\n"
+            f"Additional: {task}")
+
+        # Detect the new file
+        chapter_file = self._detect_new_chapter(files_before, chapters, ch_num)
         self._log(f"  Chapter file: {chapter_file}")
 
         # --- Step 2: Summarize ---
         self._log(f"\n  Step 2: Summarizing Chapter {ch_num}")
-        summary = self._run_agent(
-            self.summarizer,
+        summary = self._run_agent(self.summarizer,
             f"Read ONLY '{chapter_file}' (Chapter {ch_num}). Create a summary.\n"
             f"Save as 'summary_{chapter_file}'\n"
-            f"{'Append to ' + story_so_far if story_so_far else 'Create a story_so_far file'}."
-        )
+            f"{'Append to ' + story_so_far if story_so_far else 'Create a story_so_far file'}.")
 
         # --- Step 3: Critic ---
         self._log(f"\n  Step 3: Reviewing Chapter {ch_num}")
-        review = self._run_agent(
-            self.story_critic,
+        review = self._run_agent(self.story_critic,
             f"Review ONLY '{chapter_file}' (Chapter {ch_num}).\n"
             f"Summary:\n{summary}\n\n"
-            f"Read outline '{outline}' for reference. Save review as 'review_{chapter_file}'"
-        )
+            f"Read outline '{outline}' for reference. Save review as 'review_{chapter_file}'")
 
         # --- Step 4: Revise ---
         self._log(f"\n  Step 4: Revising Chapter {ch_num}")
-        revision = self._run_agent(
-            self.novel_writer,
+        revision = self._run_agent(self.novel_writer,
             f"Revise ONLY '{chapter_file}' (Chapter {ch_num}).\n\n"
             f"=== FEEDBACK ===\n{review}\n\n"
             f"Read '{chapter_file}', apply feedback, overwrite '{chapter_file}'.\n"
-            f"Keep the chapter between {CHAPTER_MIN_CHARS:,} and {CHAPTER_MAX_CHARS:,} characters.\n"
-            f"Do NOT create a new file. Do NOT touch other chapters."
-        )
-        revision_validation = self._enforce_final_chapter_length(ch_num, chapter_file, "revision")
+            f"Do NOT create a new file. Do NOT touch other chapters.")
 
         # --- Step 5: Humanize ---
         self._log(f"\n  Step 5: Humanizing Chapter {ch_num}")
-        humanized = self._run_agent(
-            self.humanizer,
+        humanized = self._run_agent(self.humanizer,
             f"Humanize ONLY '{chapter_file}' (Chapter {ch_num}).\n"
             f"Summary:\n{summary}\n\n"
             f"Read '{chapter_file}', fix AI patterns, overwrite '{chapter_file}'.\n"
-            f"Keep the chapter between {CHAPTER_MIN_CHARS:,} and {CHAPTER_MAX_CHARS:,} characters.\n"
-            f"IMPORTANT: Ensure proper text formatting - no HTML entities like &quot;"
-        )
-        humanize_validation = self._enforce_final_chapter_length(ch_num, chapter_file, "humanizing")
+            f"IMPORTANT: Ensure proper text formatting - no HTML entities like &quot;")
 
-        # --- Step 6: Story Track (Arc Compliance) ---
+        # --- Step 6: Character Count Verification ---
+        self._log(f"\n  Step 6: Verifying Character Count for Chapter {ch_num}")
+        
+        char_count_check = self._run_agent(self.summarizer,
+            f"Read '{chapter_file}' and count the EXACT character count.\n"
+            f"Report: Total character count, is it within 36,000-45,000 range?\n"
+            f"If under 36,000 characters, note how many more characters are needed.\n"
+            f"If over 45,000 characters, note how many characters to trim.\n"
+            f"Also check for formatting issues (&quot; should be \")")
+
+        # Log the character count result
+        self._log(f"  Character count check: {char_count_check[:200]}...")
+        
+        # Extract character count from response
+        try:
+            # Try to find a number in the response
+            import re
+            numbers = re.findall(r'\d+', char_count_check)
+            count = int(numbers[0]) if numbers else 0
+        except:
+            count = 0
+        
+        # If chapter is too short, expand it
+        if count > 0 and count < 36000:
+            self._log(f"  Chapter too short - expanding...")
+            expansion = self._run_agent(self.novel_writer,
+                f"Expand '{chapter_file}' to meet 36,000-45,000 character target.\n"
+                f"{char_count_check}\n\n"
+                f"Read the chapter, add more detail, dialogue, and scenes to reach 36,000+ characters.\n"
+                f"Overwrite the file when done.")
+            self._log(f"  Expansion complete")
+
+        # --- Step 7: Story Track (Arc Compliance) ---
         self._log(f"\n  Step 6: Story Track - Verifying Arc Compliance for Chapter {ch_num}")
 
-        arc_check = self._run_agent(
-            self.story_tracker,
+        arc_check = self._run_agent(self.story_tracker,
             f"Verify Chapter {ch_num} follows the planned novel arc.\n"
             f"Outline: '{outline}'\n"
             f"Story so far: {story_so_far or 'none'}\n"
@@ -385,16 +396,15 @@ class Orchestrator:
             f"5. Pacing: too fast (skipping beats) or too slow (filler)?\n\n"
             f"Read the outline and story_so_far FIRST, then read the chapter.\n"
             f"Save tracker report as 'tracker_{chapter_file}'.\n"
-            f"If drift is detected, provide specific recommendations to get back on track."
-        )
+            f"If drift is detected, provide specific recommendations to get back on track.")
 
         # --- Step 7: Continuity Check ---
-        self._log(f"\n  Step 7: Continuity Check on Chapter {ch_num}")
+        self._log(f"\n  Step 8: Continuity Check on Chapter {ch_num}")
 
+        # Get the previous chapter file for transition checking
         prev_ch_file = chapter_map.get(ch_num - 1, None) if ch_num > 1 else None
 
-        continuity = self._run_agent(
-            self.continuity_checker,
+        continuity = self._run_agent(self.continuity_checker,
             f"Check Chapter {ch_num} (file: '{chapter_file}') for completeness.\n"
             f"Outline: '{outline}'\n"
             f"{'Previous chapter: ' + prev_ch_file if prev_ch_file else 'This is the first chapter.'}\n"
@@ -408,22 +418,15 @@ class Orchestrator:
             f"6. All scenes are complete (no unfinished scenes)\n\n"
             f"If ANY issues are found, fix them by reading '{chapter_file}', "
             f"making corrections, and overwriting '{chapter_file}'.\n"
-            f"Keep the final chapter between {CHAPTER_MIN_CHARS:,} and {CHAPTER_MAX_CHARS:,} characters.\n"
-            f"Save a continuity report as 'continuity_{chapter_file}'."
-        )
-        continuity_validation = self._enforce_final_chapter_length(ch_num, chapter_file, "continuity check")
+            f"Save a continuity report as 'continuity_{chapter_file}'.")
 
         # --- Step 8: Format to .docx ---
-        self._log(f"\n  Step 8: Formatting Chapter {ch_num} to Word")
+        self._log(f"\n  Step 9: Formatting Chapter {ch_num} to Word")
         docx_name = chapter_file.replace(".txt", ".docx")
-        formatted = self._run_agent(
-            self.formatter,
+        formatted = self._run_agent(self.formatter,
             f"Convert ONLY '{chapter_file}' to Word.\n"
             f"Save as '{docx_name}'. Heading: '## Chapter {ch_num}'.\n"
-            f"Do NOT convert other files."
-        )
-
-        final_character_count = self._count_file_chars(chapter_file)
+            f"Do NOT convert other files.")
 
         return {
             "chapter_number": str(ch_num),
@@ -433,42 +436,117 @@ class Orchestrator:
             "review": review,
             "revised": revision,
             "humanized": humanized,
-            "revision_validation": revision_validation,
-            "humanize_validation": humanize_validation,
             "arc_check": arc_check,
             "continuity": continuity,
-            "continuity_validation": continuity_validation,
             "formatted": formatted,
-            "final_character_count": final_character_count,
         }
 
     def _novel_start(self, task):
-        """Full novel kickoff using the same validated chapter pipeline."""
+        """Full novel kickoff."""
 
         self._log("\n  Phase 1: Research")
-        research = self._run_agent(
-            self.researcher,
+        research = self._run_agent(self.researcher,
             f"Research background for a novel about: {task}\n"
-            f"Focus on setting, history, culture, technical details."
-        )
+            f"Focus on setting, history, culture, technical details.")
 
         self._log("\n  Phase 2: Story Planning")
-        plan = self._run_agent(
-            self.story_director,
+        plan = self._run_agent(self.story_director,
             f"Create a novel outline for:\n\n{task}\n\nResearch:\n{research}\n\n"
             f"Choose a TITLE. Give each chapter a creative title. "
-            f"Calculate chapter count for 70,000-100,000 word target using "
-            f"{CHAPTER_MIN_CHARS:,}-{CHAPTER_MAX_CHARS:,} characters per chapter. "
-            f"Define file naming. List all filenames."
-        )
+            f"Calculate chapter count for 70,000-100,000 word target. "
+            f"Define file naming. List all filenames.")
 
-        self._log("\n  Phase 3: Writing Chapter 1 with validated chunks")
-        chapter_1_result = self._novel_chapter(f"Write Chapter 1. Original story concept: {task}")
+        self._log("\n  Phase 3: Writing Chapter 1")
+        files_before = set(f.name for f in _get_output_dir().iterdir())
+        chapter_1 = self._run_agent(self.novel_writer,
+            f"Read the novel outline, then write Chapter 1. "
+            f"Include 'ch1' in the filename. Hook the reader immediately.")
+
+        ch1_file = self._detect_new_chapter(files_before, [], 1)
+        self._log(f"  Chapter 1 file: {ch1_file}")
+
+        self._log("\n  Phase 4: Summarizing")
+        summary = self._run_agent(self.summarizer,
+            f"Read ONLY '{ch1_file}'. Create summary and story_so_far file.")
+
+        self._log("\n  Phase 5: Reviewing")
+        review = self._run_agent(self.story_critic,
+            f"Review ONLY '{ch1_file}'.\nSummary:\n{summary}\n\n"
+            f"Read outline for reference. Save review.")
+
+        self._log("\n  Phase 6: Revising")
+        revision = self._run_agent(self.novel_writer,
+            f"Revise ONLY '{ch1_file}':\n\n=== REVIEW ===\n{review}\n\n"
+            f"Read '{ch1_file}', apply feedback, overwrite '{ch1_file}'.")
+
+        self._log("\n  Phase 7: Humanizing")
+        humanized = self._run_agent(self.humanizer,
+            f"Humanize ONLY '{ch1_file}'.\nSummary:\n{summary}\n\n"
+            f"Read '{ch1_file}', fix AI patterns, overwrite.\n"
+            f"IMPORTANT: Ensure proper text formatting - no HTML entities like &quot;")
+
+        self._log("\n  Phase 8: Character Count Verification")
+        char_count_check = self._run_agent(self.summarizer,
+            f"Read '{ch1_file}' and count the EXACT character count.\n"
+            f"Report: Total character count, is it within 36,000-45,000 range?\n"
+            f"If under 36,000 characters, note how many more characters are needed.\n"
+            f"Also check for formatting issues (&quot; should be \")")
+        
+        self._log(f"  Character count check: {char_count_check[:200]}...")
+        
+        # Extract character count from response
+        try:
+            import re
+            numbers = re.findall(r'\d+', char_count_check)
+            count = int(numbers[0]) if numbers else 0
+        except:
+            count = 0
+        
+        if count > 0 and count < 36000:
+            self._log(f"  Chapter too short - expanding...")
+            expansion = self._run_agent(self.novel_writer,
+                f"Expand '{ch1_file}' to meet 36,000-45,000 character target.\n"
+                f"{char_count_check}\n\n"
+                f"Read the chapter, add more detail, dialogue, and scenes to reach 36,000+ characters.\n"
+                f"Overwrite the file when done.")
+            self._log(f"  Expansion complete")
+
+        self._log("\n  Phase 9: Story Track - Arc Compliance")
+        arc_check = self._run_agent(self.story_tracker,
+            f"Verify Chapter 1 follows the planned novel arc.\n"
+            f"Outline: (created in Phase 2)\n"
+            f"Current chapter: {ch1_file}\n\n"
+            f"Check:\n"
+            f"1. Does this chapter properly set up the Beginning (Act 1)?\n"
+            f"2. Is the inciting incident present?\n"
+            f"3. Are main characters introduced?\n"
+            f"4. Is the world established?\n"
+            f"5. Does it hook the reader and set up the story goal?\n\n"
+            f"Read the outline (created in Phase 2) and the chapter.\n"
+            f"Save tracker report as 'tracker_{ch1_file}'.")
+        self._log("\n  Phase 9: Continuity Check")
+        continuity = self._run_agent(self.continuity_checker,
+            f"Check Chapter 1 ('{ch1_file}') for completeness.\n"
+            f"Read the outline for reference.\n"
+            f"Verify: complete sentences, proper ending with hook, "
+            f"no unfinished scenes, matches outline.\n"
+            f"Fix any issues by overwriting '{ch1_file}'.\n"
+            f"Save report as 'continuity_{ch1_file}'.")
+
+        self._log("\n  Phase 9: Formatting to Word")
+        ch1_docx = ch1_file.replace(".txt", ".docx")
+        formatted = self._run_agent(self.formatter,
+            f"Convert '{ch1_file}' to Word as '{ch1_docx}'. "
+            f"Add title page with novel title, then Chapter 1.")
 
         return {
-            "research": research,
-            "novel_outline": plan,
-            "chapter_1": chapter_1_result,
+            "research": research, "novel_outline": plan,
+            "chapter_1_file": ch1_file,
+            "chapter_1_draft": chapter_1, "chapter_1_summary": summary,
+            "chapter_1_review": review, "chapter_1_revised": revision,
+            "chapter_1_humanized": humanized, "chapter_1_arc_check": arc_check,
+            "chapter_1_continuity": continuity,
+            "chapter_1_formatted": formatted,
         }
 
     def _write_novel(self, task):
@@ -639,26 +717,21 @@ class Orchestrator:
         story_so_far: str | None,
         task: str,
     ):
-        base_text = self._read_file_text(chapter_file)
-        before_count = len(base_text)
+        before_count = self._count_file_chars(chapter_file)
 
         for attempt in range(1, MAX_CHUNK_RETRIES + 1):
-            # Restore the file to the last validated state before each fresh attempt.
-            self._write_file_text(chapter_file, base_text)
-
             mode = "write_file" if chunk_num == 1 and before_count == 0 else "append_file"
 
             prompt = f"""
 Write ONLY Chunk {chunk_num} of Chapter {ch_num}.
 
 STRICT LENGTH RULE:
-- This chunk MUST be {CHUNK_MIN_CHARS:,}-{CHUNK_MAX_CHARS:,} characters.
+- This chunk MUST be 10,000–12,000 characters.
 - Do not write less.
 - Do not write more.
 - End the chunk at a natural scene beat.
 - Do not summarize.
 - Do not explain.
-- Do not write the next chunk.
 
 File: {chapter_file}
 Tool to use: {mode}
@@ -669,7 +742,7 @@ Context:
 - User task: {task}
 
 IMPORTANT:
-After writing this chunk, stop. The orchestrator will count the characters.
+After writing this chunk, stop. Do not write the next chunk.
 """
 
             result = self._run_agent(self.novel_writer, prompt)
@@ -700,17 +773,18 @@ After writing this chunk, stop. The orchestrator will count the characters.
 Chunk {chunk_num} of Chapter {ch_num} failed validation.
 
 Current chunk length: {chunk_count} characters.
-Required: {CHUNK_MIN_CHARS:,}-{CHUNK_MAX_CHARS:,} characters.
+Required: 10,000–12,000 characters.
 Status: {status}
 
-Fix ONLY Chunk {chunk_num}.
+You must fix ONLY the latest chunk.
 
 Instructions:
 - Read {chapter_file}.
-- Preserve all earlier validated chunks exactly.
-- If too short, expand the latest chunk with meaningful scene detail, action, dialogue, interior thought, and sensory description.
-- If too long, trim the latest chunk while preserving plot.
-- Overwrite {chapter_file}; do not create a new file.
+- Identify the latest chunk you just wrote.
+- If too short, expand that chunk with more scene detail, action, dialogue, internal thought, and sensory description.
+- If too long, trim that chunk while preserving plot.
+- Rewrite the chapter file so Chunk {chunk_num} becomes 10,000–12,000 characters.
+- Do NOT alter earlier chunks unless needed for smooth transition.
 - Do NOT continue to the next chunk.
 """
 
@@ -737,9 +811,6 @@ Instructions:
                     "status": "passed_after_fix",
                     "agent_result": result,
                 }
-
-            # Failed fix: restore and try a fresh chunk attempt.
-            self._write_file_text(chapter_file, base_text)
 
         raise ValueError(
             f"Chunk {chunk_num} failed after {MAX_CHUNK_RETRIES} attempts. "

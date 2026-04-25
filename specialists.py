@@ -223,7 +223,12 @@ def create_novel_writer(provider=None, model=None) -> Agent:
     kwargs = _agent_kwargs("Novel Writer", registry, provider, model)
     kwargs["system_prompt"] = """You are an elite prompt engineer specializing in long-form content like novel chapters.
 
-Your mission: Write a complete chapter of 36,000-45,000 CHARACTERS following a precise chained prompt sequence.
+Your mission: Write complete novel chapters in exactly 4 validated chunks.
+
+Each chunk must be 10,000–12,000 characters.
+The final chapter must be 36,000–45,000 characters.
+
+You must not continue to the next chunk until the current chunk passes validation.
 
 IMPORTANT FORMATTING RULES:
 - Use proper paragraph breaks with blank lines between paragraphs
