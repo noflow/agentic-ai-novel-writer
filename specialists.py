@@ -225,6 +225,14 @@ def create_novel_writer(provider=None, model=None) -> Agent:
 
 Your mission: Write a complete chapter of 4000-6000 words following a precise 10-step chained prompt sequence.
 
+IMPORTANT FORMATTING RULES:
+- Use proper paragraph breaks with blank lines between paragraphs
+- Use standard quotation marks: "speech" not &quot;speech&quot; or "speech"
+- Use em dashes properly: — (not --)
+- Use ellipses properly: ... (not ...)
+- NO HTML entities or special characters
+- Plain text only - no formatting codes
+
 ================================================================================
 STEP 0: DERIVE RULES (Before writing anything)
 ================================================================================
@@ -241,77 +249,90 @@ Create a brief "Chapter Rules" note in your head that you'll follow throughout.
 STEP 1: OUTLINE THE CHAPTER
 ================================================================================
 Before writing, create a detailed outline for this chapter:
-- Opening scene (500-800 words): What happens? Who is involved?
-- Rising action (1500-2000 words): How does tension build?
-- Midpoint moment (500-800 words): What revelation or shift occurs?
-- Falling action (1000-1500 words): How do events unfold?
-- Cliffhanger/ending (500-800 words): What leaves the reader wanting more?
+- Scene 1 (1200-1500 words): Opening - hook, establish situation
+- Scene 2 (1200-1500 words): Development - conflict builds
+- Scene 3 (1200-1500 words): Complications - obstacles arise
+- Scene 4 (1200-1500 words): Midpoint - revelation/turning point
+- Scene 5 (1200-1500 words): Cliffhanger - hook for next chapter
 
-Total target: 4000-6000 words
+Total target: 4000-6000 words (1200-1500 × 5 scenes = 6000-7500 max, aim for 4500-5500)
 
 Example outline format:
 ```
-Chapter X Outline:
-- Scene 1: [description] ~[word count]
-- Scene 2: [description] ~[word count]
-- Scene 3: [description] ~[word count]
-- Scene 4: [description] ~[word count]
-- Scene 5: [description] ~[word count]
+Chapter X Outline (~4500 words total):
+- Scene 1: [description] ~1300 words
+- Scene 2: [description] ~1300 words
+- Scene 3: [description] ~1300 words
+- Scene 4: [description] ~1300 words
+- Scene 5: [description] ~1300 words
 ```
 
 ================================================================================
-STEP 2: WRITE SCENE 1 - OPENING
+STEP 2: WRITE SCENE 1 - OPENING (1200-1500 words)
 ================================================================================
-Write the opening scene (500-800 words). This must:
+Write the opening scene (1200-1500 words). This must:
 - Hook the reader immediately
 - Establish the POV character's emotional state
 - Introduce the central conflict of this chapter
 - Use vivid sensory details
 
 Use write_file to create the chapter file with Scene 1.
+TARGET: 1200-1500 words minimum for this scene.
 
 ================================================================================
-STEP 3: WRITE SCENE 2-3 - RISING ACTION
+STEP 3: WRITE SCENE 2 - DEVELOPMENT (1200-1500 words)
 ================================================================================
-Append Scene 2 (800-1000 words):
+Append Scene 2 (1200-1500 words):
 - Develop the conflict introduced in Scene 1
 - Show character reactions and decisions
 - Build tension through dialogue and action
 
-Append Scene 3 (800-1000 words):
+TARGET: 1200-1500 words minimum for this scene.
+
+================================================================================
+STEP 4: WRITE SCENE 3 - COMPLICATIONS (1200-1500 words)
+================================================================================
+Append Scene 3 (1200-1500 words):
 - Introduce complications or obstacles
 - Deepen character relationships
 - Advance the plot toward midpoint
 
+TARGET: 1200-1500 words minimum for this scene.
+
 ================================================================================
-STEP 4: WRITE SCENE 4 - MIDPOINT
+STEP 5: WRITE SCENE 4 - MIDPOINT (1200-1500 words)
 ================================================================================
-Append Scene 4 (500-800 words):
+Append Scene 4 (1200-1500 words):
 - This is the pivotal moment of the chapter
 - A revelation, decision, or turning point
 - Must shift the direction of the story
 - Emotional peak of the chapter
 
+TARGET: 1200-1500 words minimum for this scene.
+
 ================================================================================
-STEP 5: WRITE SCENE 5 - CLIFFHANGER
+STEP 6: WRITE SCENE 5 - CLIFFHANGER (1200-1500 words)
 ================================================================================
-Append Scene 5 (500-800 words):
+Append Scene 5 (1200-1500 words):
 - Resolve or partially resolve the chapter's conflict
 - Set up the next chapter
 - End with a hook, question, or moment that demands continuation
 - The reader should WANT to turn the page
 
+TARGET: 1200-1500 words minimum for this scene.
+
 ================================================================================
-STEP 6: MERGE AND REVIEW
+STEP 7: MERGE AND REVIEW
 ================================================================================
 Read back through all scenes. Ensure:
 - Transitions between scenes are smooth
 - No jarring jumps in time or location
 - Character voices remain consistent
 - The chapter flows as one cohesive piece
+- Proper paragraph formatting throughout
 
 ================================================================================
-STEP 7: SELF-EDIT FOR CONSISTENCY
+STEP 8: SELF-EDIT FOR CONSISTENCY
 ================================================================================
 Check and fix:
 - Character names and descriptions consistent
@@ -319,35 +340,39 @@ Check and fix:
 - Dialogue attributions correct
 - Point of view consistent
 - No contradictions with previous chapters
+- Fix any &quot; or HTML entity issues
 
 ================================================================================
-STEP 8: EXPAND TO TARGET LENGTH
+STEP 9: VERIFY WORD COUNT
 ================================================================================
-If the chapter is under 4000 words, add detail:
-- Expand dialogue with more subtext
-- Add sensory descriptions (sight, sound, smell, taste, touch)
-- Include more character thoughts and reactions
-- Develop scenes that feel underdeveloped
+Count the words in your chapter:
+- Read the entire chapter file
+- Count all words (exclude headers like "Chapter X")
+- If under 4000 words: ADD MORE CONTENT to reach 4000+
+- If 4000-6000 words: Good! Proceed to step 10
+- If over 6000 words: TRIM carefully while preserving story
 
-If over 6000 words, trim carefully:
-- Remove redundant passages
-- Tighten dialogue
-- Combine similar scenes
-
-================================================================================
-STEP 9: VERIFY CONTINUITY
-================================================================================
-Check against the novel outline:
-- Does this chapter hit its required plot beats?
-- Are characters where they should be?
-- Is the pacing appropriate for this part of the story?
-- Does the chapter advance the overall story?
+Word count is MANDATORY - you must hit 4000-6000 words.
 
 ================================================================================
 STEP 10: FINAL FORMAT
 ================================================================================
 Ensure the chapter:
 - Has a compelling title
+- Opens with impact
+- Ends with a hook
+- Is properly formatted with paragraphs (blank lines between)
+- Has no placeholder text or [brackets]
+- No HTML entities (&quot; &amp; etc.)
+- Plain text only
+
+CRITICAL FILE RULES:
+- You will be told EXACTLY which chapter number to write and what filename to use.
+- ONLY create or modify the file you are told to work on.
+- Use list_files to see what exists BEFORE writing anything.
+- Use filenames from the novel outline's chapter outline.
+
+After writing, give a brief summary including the FINAL WORD COUNT (do NOT paste the full chapter)"""
 - Opens with impact
 - Ends with a hook
 - Is properly formatted with paragraphs
@@ -495,19 +520,33 @@ YOUR PROCESS:
 4. Save the humanized version (overwrite the original file)
 5. Give a SHORT summary of what you changed
 
+CRITICAL FORMATTING RULES:
+- Replace ALL &quot; with proper quotation marks: "
+- Replace ALL &amp; with proper ampersand: &
+- Replace ALL &lt; with proper less-than: <
+- Replace ALL &gt; with proper greater-than: >
+- Replace ALL &nbsp; with proper space
+- Replace ALL HTML entities with plain text
+- Use proper em dashes (—) not double dashes (--)
+- Use proper ellipses (...) not three periods (...)
+- Ensure all quotation marks are standard " not &quot; or &ldquo; or &rdquo;
+- Check for any remaining HTML encoding and fix it
+
 CRITICAL RULES:
 - Do NOT change the plot, characters, or story events
 - Do NOT cut content -- same length, just better voice
 - Do NOT add your own scenes or dialogue
 - DO preserve the author's intended tone
 - DO make it sound like a specific human wrote it, not a committee
-- DO keep the chapter's emotional arc intact"""
+- DO keep the chapter's emotional arc intact
+- DO fix all HTML entities during the humanizing process"""
     return Agent(**kwargs)
 
 
 def create_summarizer(provider=None, model=None) -> Agent:
     """
     The Summarizer -- creates compact chapter summaries for token efficiency.
+    Also handles word count verification.
     Runs after the Writer to give downstream agents (Critic, Humanizer)
     a concise reference instead of the full chapter text.
     """
@@ -559,6 +598,16 @@ WHEN GIVEN A CHAPTER, create a summary file that includes:
    - Pacing (fast/slow/mixed)
    - Dominant mood
    - Any stylistic choices worth noting
+
+8. WORD COUNT VERIFICATION (when asked)
+   When asked to verify word count:
+   - Read the entire chapter file
+   - Count ALL words (exclude headers like "Chapter X")
+   - Report EXACT word count
+   - If under 4000: "Chapter is UNDER at X words - needs Y more words"
+   - If 4000-6000: "Chapter is GOOD at X words (within target range)"
+   - If over 6000: "Chapter is OVER at X words - needs to trim Y words"
+   - Also check for formatting issues (&quot; should be ")
 
 FILE NAMING:
 Save the summary alongside the chapter file.

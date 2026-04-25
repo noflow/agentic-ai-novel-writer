@@ -232,6 +232,32 @@ class Orchestrator:
         gaps = info["gaps"]
         story_so_far = info["story_so_far"]
 
+        # --- CHECK FOR OUTLINE - Create if missing ---
+        if not outline:
+            self._log("\n  WARNING: No novel outline found!")
+            self._log("  Creating outline first...")
+            
+            # Extract story concept from task
+            story_concept = task
+            if "chapter" in task.lower():
+                # If task is just "write chapter 5", we need context
+                story_concept = "A novel about: " + task
+            
+            research = self._run_agent(self.researcher,
+                f"Research background for: {story_concept}\n"
+                f"Focus on setting, history, culture, technical details.")
+            
+            plan = self._run_agent(self.story_director,
+                f"Create a complete novel outline for:\n\n{story_concept}\n\nResearch:\n{research}\n\n"
+                f"Choose a TITLE. Calculate the correct number of chapters "
+                f"to hit 70,000-100,000 word target (4000-6000 words per chapter).\n"
+                f"Define file naming. List all chapter filenames.")
+            
+            # Re-scan for the new outline
+            info = _scan_novel_files()
+            outline = info["outline"]
+            self._log(f"  Outline created: {outline}")
+
         # Check if user specified a chapter number
         user_ch_match = re.search(r'chapter\s*(\d+)', task.lower())
         if user_ch_match:
@@ -310,9 +336,33 @@ class Orchestrator:
         humanized = self._run_agent(self.humanizer,
             f"Humanize ONLY '{chapter_file}' (Chapter {ch_num}).\n"
             f"Summary:\n{summary}\n\n"
-            f"Read '{chapter_file}', fix AI patterns, overwrite '{chapter_file}'.")
+            f"Read '{chapter_file}', fix AI patterns, overwrite '{chapter_file}'.\n"
+            f"IMPORTANT: Ensure proper text formatting - no HTML entities like &quot;")
 
-        # --- Step 6: Story Track (Arc Compliance) ---
+        # --- Step 6: Word Count Verification ---
+        self._log(f"\n  Step 6: Verifying Word Count for Chapter {ch_num}")
+        
+        word_count_check = self._run_agent(self.summarizer,
+            f"Read '{chapter_file}' and count the EXACT word count.\n"
+            f"Report: Total word count, is it within 4000-6000 range?\n"
+            f"If under 4000 words, note how many more words are needed.\n"
+            f"If over 6000 words, note how many words to trim.\n"
+            f"Also check for formatting issues (&quot; should be \")")
+
+        # Log the word count result
+        self._log(f"  Word count check: {word_count_check[:200]}...")
+        
+        # If chapter is too short, expand it
+        if "under 4000" in word_count_check.lower() or "needs" in word_count_check.lower():
+            self._log(f"  Chapter too short - expanding...")
+            expansion = self._run_agent(self.novel_writer,
+                f"Expand '{chapter_file}' to meet 4000-6000 word target.\n"
+                f"{word_count_check}\n\n"
+                f"Read the chapter, add more detail, dialogue, and scenes to reach 4000+ words.\n"
+                f"Overwrite the file when done.")
+            self._log(f"  Expansion complete")
+
+        # --- Step 7: Story Track (Arc Compliance) ---
         self._log(f"\n  Step 6: Story Track - Verifying Arc Compliance for Chapter {ch_num}")
 
         arc_check = self._run_agent(self.story_tracker,
@@ -331,7 +381,7 @@ class Orchestrator:
             f"If drift is detected, provide specific recommendations to get back on track.")
 
         # --- Step 7: Continuity Check ---
-        self._log(f"\n  Step 7: Continuity Check on Chapter {ch_num}")
+        self._log(f"\n  Step 8: Continuity Check on Chapter {ch_num}")
 
         # Get the previous chapter file for transition checking
         prev_ch_file = chapter_map.get(ch_num - 1, None) if ch_num > 1 else None
@@ -352,8 +402,8 @@ class Orchestrator:
             f"making corrections, and overwriting '{chapter_file}'.\n"
             f"Save a continuity report as 'continuity_{chapter_file}'.")
 
-        # --- Step 7: Format to .docx ---
-        self._log(f"\n  Step 8: Formatting Chapter {ch_num} to Word")
+        # --- Step 8: Format to .docx ---
+        self._log(f"\n  Step 9: Formatting Chapter {ch_num} to Word")
         docx_name = chapter_file.replace(".txt", ".docx")
         formatted = self._run_agent(self.formatter,
             f"Convert ONLY '{chapter_file}' to Word.\n"
@@ -414,8 +464,28 @@ class Orchestrator:
         self._log("\n  Phase 7: Humanizing")
         humanized = self._run_agent(self.humanizer,
             f"Humanize ONLY '{ch1_file}'.\nSummary:\n{summary}\n\n"
-            f"Read '{ch1_file}', fix AI patterns, overwrite.")
-        self._log("\n  Phase 8: Story Track - Arc Compliance")
+            f"Read '{ch1_file}', fix AI patterns, overwrite.\n"
+            f"IMPORTANT: Ensure proper text formatting - no HTML entities like &quot;")
+
+        self._log("\n  Phase 8: Word Count Verification")
+        word_count_check = self._run_agent(self.summarizer,
+            f"Read '{ch1_file}' and count the EXACT word count.\n"
+            f"Report: Total word count, is it within 4000-6000 range?\n"
+            f"If under 4000 words, note how many more words are needed.\n"
+            f"Also check for formatting issues (&quot; should be \")")
+        
+        self._log(f"  Word count check: {word_count_check[:200]}...")
+        
+        if "under 4000" in word_count_check.lower() or "needs" in word_count_check.lower():
+            self._log(f"  Chapter too short - expanding...")
+            expansion = self._run_agent(self.novel_writer,
+                f"Expand '{ch1_file}' to meet 4000-6000 word target.\n"
+                f"{word_count_check}\n\n"
+                f"Read the chapter, add more detail, dialogue, and scenes to reach 4000+ words.\n"
+                f"Overwrite the file when done.")
+            self._log(f"  Expansion complete")
+
+        self._log("\n  Phase 9: Story Track - Arc Compliance")
         arc_check = self._run_agent(self.story_tracker,
             f"Verify Chapter 1 follows the planned novel arc.\n"
             f"Outline: (created in Phase 2)\n"
