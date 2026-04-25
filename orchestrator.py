@@ -344,9 +344,9 @@ class Orchestrator:
         
         char_count_check = self._run_agent(self.summarizer,
             f"Read '{chapter_file}' and count the EXACT character count.\n"
-            f"Report: Total character count, is it within 36,000-42,000 range?\n"
+            f"Report: Total character count, is it within 36,000-45,000 range?\n"
             f"If under 36,000 characters, note how many more characters are needed.\n"
-            f"If over 42,000 characters, note how many characters to trim.\n"
+            f"If over 45,000 characters, note how many characters to trim.\n"
             f"Also check for formatting issues (&quot; should be \")")
 
         # Log the character count result
@@ -356,7 +356,7 @@ class Orchestrator:
         if "under 36000" in char_count_check.lower() or "needs" in char_count_check.lower():
             self._log(f"  Chapter too short - expanding...")
             expansion = self._run_agent(self.novel_writer,
-                f"Expand '{chapter_file}' to meet 36,000-42,000 character target.\n"
+                f"Expand '{chapter_file}' to meet 36,000-45,000 character target.\n"
                 f"{char_count_check}\n\n"
                 f"Read the chapter, add more detail, dialogue, and scenes to reach 36,000+ characters.\n"
                 f"Overwrite the file when done.")
@@ -470,7 +470,7 @@ class Orchestrator:
         self._log("\n  Phase 8: Character Count Verification")
         char_count_check = self._run_agent(self.summarizer,
             f"Read '{ch1_file}' and count the EXACT character count.\n"
-            f"Report: Total character count, is it within 36,000-42,000 range?\n"
+            f"Report: Total character count, is it within 36,000-45,000 range?\n"
             f"If under 36,000 characters, note how many more characters are needed.\n"
             f"Also check for formatting issues (&quot; should be \")")
         
@@ -479,7 +479,7 @@ class Orchestrator:
         if "under 36000" in char_count_check.lower() or "needs" in char_count_check.lower():
             self._log(f"  Chapter too short - expanding...")
             expansion = self._run_agent(self.novel_writer,
-                f"Expand '{ch1_file}' to meet 36,000-42,000 character target.\n"
+                f"Expand '{ch1_file}' to meet 36,000-45,000 character target.\n"
                 f"{char_count_check}\n\n"
                 f"Read the chapter, add more detail, dialogue, and scenes to reach 36,000+ characters.\n"
                 f"Overwrite the file when done.")

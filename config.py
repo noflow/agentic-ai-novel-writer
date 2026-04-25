@@ -87,6 +87,39 @@ TEMPERATURE = 1.0
 CHARS_PER_TOKEN_ESTIMATE = 4
 MAX_CONTEXT_CHARS = 150_000
 
+# --- Chapter Writing Settings ---
+CHUNK_MIN_CHARS = 10_000
+CHUNK_MAX_CHARS = 12_000
+CHAPTER_MIN_CHARS = 36_000
+CHAPTER_MAX_CHARS = 45_000
+TARGET_CHUNKS_PER_CHAPTER = 4
+
+
+# --- Chapter Validation Helpers ---
+def count_chars(text: str) -> int:
+    """Count characters in text (excluding headers)."""
+    return len(text)
+
+
+def validate_chunk(text: str, chunk_num: int) -> tuple[bool, str]:
+    """Validate a chunk is within character count bounds."""
+    count = count_chars(text)
+    if count < CHUNK_MIN_CHARS:
+        return False, f"Chunk {chunk_num} is too short: {count}. Needs {CHUNK_MIN_CHARS - count} more chars."
+    if count > CHUNK_MAX_CHARS:
+        return False, f"Chunk {chunk_num} is too long: {count}. Trim {count - CHUNK_MAX_CHARS} chars."
+    return True, f"Chunk {chunk_num} passed: {count} chars."
+
+
+def validate_chapter(text: str) -> tuple[bool, str]:
+    """Validate a chapter is within character count bounds."""
+    count = count_chars(text)
+    if count < CHAPTER_MIN_CHARS:
+        return False, f"Chapter is too short: {count}. Needs {CHAPTER_MIN_CHARS - count} more chars."
+    if count > CHAPTER_MAX_CHARS:
+        return False, f"Chapter is too long: {count}. Trim {count - CHAPTER_MAX_CHARS} chars."
+    return True, f"Chapter passed: {count} chars (target: {CHAPTER_MIN_CHARS}-{CHAPTER_MAX_CHARS})."
+
 # --- Agent Defaults ---
 DEFAULT_SYSTEM_PROMPT = """You are a helpful AI assistant with access to tools.
 

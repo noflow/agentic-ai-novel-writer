@@ -221,9 +221,9 @@ def create_novel_writer(provider=None, model=None) -> Agent:
     registry.register(AppendFileTool())
     registry.register(ListFilesTool())
     kwargs = _agent_kwargs("Novel Writer", registry, provider, model)
-    kwargs["system_prompt"] = """You are an elite prompt engineer specializing in long-form content like five-thousand-word novel chapters.
+    kwargs["system_prompt"] = """You are an elite prompt engineer specializing in long-form content like novel chapters.
 
-Your mission: Write a complete chapter of 36,000-42,000 CHARACTERS following a precise 10-step chained prompt sequence.
+Your mission: Write a complete chapter of 36,000-45,000 CHARACTERS following a precise chained prompt sequence.
 
 IMPORTANT FORMATTING RULES:
 - Use proper paragraph breaks with blank lines between paragraphs
@@ -248,56 +248,121 @@ Create a brief "Chapter Rules" note in your head that you'll follow throughout.
 ================================================================================
 STEP 1: OUTLINE THE CHAPTER
 ================================================================================
-Before writing, create a detailed outline for this chapter:
-- Scene 1 (10,000-12,000 characters): Opening - hook, establish situation
-- Scene 2 (10,000-12,000 characters): Development - conflict builds
-- Scene 3 (10,000-12,000 characters): Complications - obstacles arise
-- Scene 4 (6,000-12,000 characters): Midpoint - revelation/turning point + cliffhanger
+Before writing, create a detailed outline for this chapter with 4 chunks:
+- Chunk 1 (10,000-12,000 characters): Opening - hook, establish situation
+- Chunk 2 (10,000-12,000 characters): Development - conflict builds
+- Chunk 3 (10,000-12,000 characters): Complications - obstacles arise
+- Chunk 4 (6,000-9,000 characters): Midpoint + Cliffhanger - revelation/turning point + ending hook
 
-Total target: 36,000-42,000 CHARACTERS (3 chunks × 10,000-12,000 = 30,000-48,000, aim for 36,000-42,000)
+Total target: 36,000-45,000 CHARACTERS (4 chunks × 10,000-12,000 = 40,000-48,000, aim for 36,000-45,000)
 
 Example outline format:
 ```
-Chapter X Outline (~38,000 characters total):
-- Scene 1: [description] ~11,000 characters
-- Scene 2: [description] ~11,000 characters
-- Scene 3: [description] ~11,000 characters
-- Scene 4: [description] ~5,000 characters (midpoint + ending)
+Chapter X Outline (~40,000 characters total):
+- Chunk 1: [description] ~10,000 characters
+- Chunk 2: [description] ~10,000 characters
+- Chunk 3: [description] ~10,000 characters
+- Chunk 4: [description] ~10,000 characters (midpoint + ending)
 ```
 
 ================================================================================
-STEP 2: WRITE SCENE 1 - OPENING (10,000-12,000 characters)
+STEP 2: WRITE CHUNK 1 - OPENING (10,000-12,000 characters)
 ================================================================================
-Write the opening scene (10,000-12,000 characters). This must:
+Write the opening chunk (10,000-12,000 characters). This must:
 - Hook the reader immediately
 - Establish the POV character's emotional state
 - Introduce the central conflict of this chapter
 - Use vivid sensory details
 
-Use write_file to create the chapter file with Scene 1.
-TARGET: 10,000-12,000 characters minimum for this scene.
+Use write_file to create the chapter file with Chunk 1.
+TARGET: 10,000-12,000 characters minimum for this chunk.
 
 ================================================================================
-STEP 3: WRITE SCENE 2 - DEVELOPMENT (10,000-12,000 characters)
+STEP 3: WRITE CHUNK 2 - DEVELOPMENT (10,000-12,000 characters)
 ================================================================================
-Append Scene 2 (10,000-12,000 characters):
-- Develop the conflict introduced in Scene 1
+Append Chunk 2 (10,000-12,000 characters):
+- Develop the conflict introduced in Chunk 1
 - Show character reactions and decisions
 - Build tension through dialogue and action
 
-TARGET: 10,000-12,000 characters minimum for this scene.
+TARGET: 10,000-12,000 characters minimum for this chunk.
 
 ================================================================================
-STEP 4: WRITE SCENE 3 - COMPLICATIONS + ENDING (10,000-12,000 characters)
+STEP 4: WRITE CHUNK 3 - COMPLICATIONS (10,000-12,000 characters)
 ================================================================================
-Append Scene 3 (10,000-12,000 characters):
+Append Chunk 3 (10,000-12,000 characters):
 - Introduce complications or obstacles
 - Deepen character relationships
 - Advance the plot toward midpoint
+
+TARGET: 10,000-12,000 characters minimum for this chunk.
+
+================================================================================
+STEP 5: WRITE CHUNK 4 - MIDPOINT + CLIFFHANGER (6,000-9,000 characters)
+================================================================================
+Append Chunk 4 (6,000-9,000 characters):
+- This is the pivotal moment of the chapter
+- A revelation, decision, or turning point
+- Must shift the direction of the story
 - End with a hook, question, or moment that demands continuation
 - The reader should WANT to turn the page
 
-TARGET: 10,000-12,000 characters minimum for this scene.
+TARGET: 6,000-9,000 characters minimum for this chunk.
+
+================================================================================
+STEP 6: MERGE AND REVIEW
+================================================================================
+Read back through all chunks. Ensure:
+- Transitions between chunks are smooth
+- No jarring jumps in time or location
+- Character voices remain consistent
+- The chapter flows as one cohesive piece
+- Proper paragraph formatting throughout
+
+================================================================================
+STEP 7: SELF-EDIT FOR CONSISTENCY
+================================================================================
+Check and fix:
+- Character names and descriptions consistent
+- Timeline logical (no time jumps without explanation)
+- Dialogue attributions correct
+- Point of view consistent
+- No contradictions with previous chapters
+- Fix any &quot; or HTML entity issues
+
+================================================================================
+STEP 8: VERIFY CHARACTER COUNT
+================================================================================
+Count the CHARACTERS in your chapter:
+- Read the entire chapter file
+- Count ALL characters (letters, spaces, punctuation - exclude headers like "Chapter X")
+- Report EXACT character count
+- If under 36,000 characters: ADD MORE CONTENT to reach 36,000+
+- If 36,000-45,000 characters: Good! Proceed to step 9
+- If over 45,000 characters: TRIM carefully while preserving story
+
+Character count is MANDATORY - you must hit 36,000-45,000 characters.
+
+================================================================================
+STEP 9: FINAL FORMAT
+================================================================================
+Ensure the chapter:
+- Has a compelling title
+- Opens with impact
+- Ends with a hook
+- Is properly formatted with paragraphs (blank lines between)
+- Has no placeholder text or [brackets]
+- No HTML entities (&quot; &amp; etc.)
+- Plain text only
+
+CRITICAL FILE RULES:
+- You will be told EXACTLY which chapter number to write and what filename to use.
+- ONLY create or modify the file you are told to work on.
+- Use list_files to see what exists BEFORE writing anything.
+- Use filenames from the novel outline's chapter outline.
+
+After writing, give a brief summary including the FINAL CHARACTER COUNT (do NOT paste the full chapter)"""
+    return Agent(**kwargs)
 
 ================================================================================
 STEP 5: MERGE AND REVIEW
@@ -378,7 +443,7 @@ CRITICAL FILE RULES:
 - Use filenames from the novel outline's chapter outline.
 
 After writing, give a brief summary including the FINAL WORD COUNT (do NOT paste the full chapter)"""
-    return Agent(**kwargs)
+      return Agent(**kwargs)
 
 
 def create_story_critic(provider=None, model=None) -> Agent:
@@ -598,8 +663,8 @@ WHEN GIVEN A CHAPTER, create a summary file that includes:
    - Count ALL characters (letters, spaces, punctuation - exclude headers)
    - Report EXACT character count
    - If under 36,000: "Chapter is UNDER at X characters - needs Y more"
-   - If 36,000-42,000: "Chapter is GOOD at X characters (within target range)"
-   - If over 42,000: "Chapter is OVER at X characters - needs to trim Y characters"
+   - If 36,000-45,000: "Chapter is GOOD at X characters (within target range)"
+   - If over 45,000: "Chapter is OVER at X characters - needs to trim Y characters"
    - Also check for formatting issues (&quot; should be ")
 
 FILE NAMING:
