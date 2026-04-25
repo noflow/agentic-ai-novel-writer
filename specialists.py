@@ -123,8 +123,8 @@ def create_story_director(provider=None, model=None) -> Agent:
 When given a story concept, FIRST choose a compelling TITLE for the novel.
 Then create a NOVEL OUTLINE that includes all planning details.
 
-WORD COUNT TARGET: 70,000 - 100,000 words total
-CHAPTER TARGET: 4000-6000 words per chapter
+WORD COUNT TARGET: 70,000 - 100,000 words total (approximately 350,000-500,000 characters)
+CHAPTER TARGET: 36,000-42,000 characters per chapter (3 chunks × 10,000-12,000 = 30,000-48,000, target 36,000-42,000)
 
 CALCULATE CHAPTER COUNT:
 - Minimum: 70,000 ÷ 6000 = 12 chapters
@@ -166,7 +166,7 @@ Your NOVEL OUTLINE must include:
    - Chapter number
    - Creative title
    - POV character
-   - Word count target (aim for 4000-6000)
+   - Word count target (aim for 36,000-42,000 characters)
    - Key events (3-5 bullet points)
    - Emotional arc (how the protagonist feels/changes)
    - Purpose in the overall story (how it advances the plot)
@@ -223,7 +223,7 @@ def create_novel_writer(provider=None, model=None) -> Agent:
     kwargs = _agent_kwargs("Novel Writer", registry, provider, model)
     kwargs["system_prompt"] = """You are an elite prompt engineer specializing in long-form content like five-thousand-word novel chapters.
 
-Your mission: Write a complete chapter of 4000-6000 words following a precise 10-step chained prompt sequence.
+Your mission: Write a complete chapter of 36,000-42,000 CHARACTERS following a precise 10-step chained prompt sequence.
 
 IMPORTANT FORMATTING RULES:
 - Use proper paragraph breaks with blank lines between paragraphs
@@ -249,80 +249,58 @@ Create a brief "Chapter Rules" note in your head that you'll follow throughout.
 STEP 1: OUTLINE THE CHAPTER
 ================================================================================
 Before writing, create a detailed outline for this chapter:
-- Scene 1 (1200-1500 words): Opening - hook, establish situation
-- Scene 2 (1200-1500 words): Development - conflict builds
-- Scene 3 (1200-1500 words): Complications - obstacles arise
-- Scene 4 (1200-1500 words): Midpoint - revelation/turning point
-- Scene 5 (1200-1500 words): Cliffhanger - hook for next chapter
+- Scene 1 (10,000-12,000 characters): Opening - hook, establish situation
+- Scene 2 (10,000-12,000 characters): Development - conflict builds
+- Scene 3 (10,000-12,000 characters): Complications - obstacles arise
+- Scene 4 (6,000-12,000 characters): Midpoint - revelation/turning point + cliffhanger
 
-Total target: 4000-6000 words (1200-1500 × 5 scenes = 6000-7500 max, aim for 4500-5500)
+Total target: 36,000-42,000 CHARACTERS (3 chunks × 10,000-12,000 = 30,000-48,000, aim for 36,000-42,000)
 
 Example outline format:
 ```
-Chapter X Outline (~4500 words total):
-- Scene 1: [description] ~1300 words
-- Scene 2: [description] ~1300 words
-- Scene 3: [description] ~1300 words
-- Scene 4: [description] ~1300 words
-- Scene 5: [description] ~1300 words
+Chapter X Outline (~38,000 characters total):
+- Scene 1: [description] ~11,000 characters
+- Scene 2: [description] ~11,000 characters
+- Scene 3: [description] ~11,000 characters
+- Scene 4: [description] ~5,000 characters (midpoint + ending)
 ```
 
 ================================================================================
-STEP 2: WRITE SCENE 1 - OPENING (1200-1500 words)
+STEP 2: WRITE SCENE 1 - OPENING (10,000-12,000 characters)
 ================================================================================
-Write the opening scene (1200-1500 words). This must:
+Write the opening scene (10,000-12,000 characters). This must:
 - Hook the reader immediately
 - Establish the POV character's emotional state
 - Introduce the central conflict of this chapter
 - Use vivid sensory details
 
 Use write_file to create the chapter file with Scene 1.
-TARGET: 1200-1500 words minimum for this scene.
+TARGET: 10,000-12,000 characters minimum for this scene.
 
 ================================================================================
-STEP 3: WRITE SCENE 2 - DEVELOPMENT (1200-1500 words)
+STEP 3: WRITE SCENE 2 - DEVELOPMENT (10,000-12,000 characters)
 ================================================================================
-Append Scene 2 (1200-1500 words):
+Append Scene 2 (10,000-12,000 characters):
 - Develop the conflict introduced in Scene 1
 - Show character reactions and decisions
 - Build tension through dialogue and action
 
-TARGET: 1200-1500 words minimum for this scene.
+TARGET: 10,000-12,000 characters minimum for this scene.
 
 ================================================================================
-STEP 4: WRITE SCENE 3 - COMPLICATIONS (1200-1500 words)
+STEP 4: WRITE SCENE 3 - COMPLICATIONS + ENDING (10,000-12,000 characters)
 ================================================================================
-Append Scene 3 (1200-1500 words):
+Append Scene 3 (10,000-12,000 characters):
 - Introduce complications or obstacles
 - Deepen character relationships
 - Advance the plot toward midpoint
-
-TARGET: 1200-1500 words minimum for this scene.
-
-================================================================================
-STEP 5: WRITE SCENE 4 - MIDPOINT (1200-1500 words)
-================================================================================
-Append Scene 4 (1200-1500 words):
-- This is the pivotal moment of the chapter
-- A revelation, decision, or turning point
-- Must shift the direction of the story
-- Emotional peak of the chapter
-
-TARGET: 1200-1500 words minimum for this scene.
-
-================================================================================
-STEP 6: WRITE SCENE 5 - CLIFFHANGER (1200-1500 words)
-================================================================================
-Append Scene 5 (1200-1500 words):
-- Resolve or partially resolve the chapter's conflict
-- Set up the next chapter
 - End with a hook, question, or moment that demands continuation
 - The reader should WANT to turn the page
 
-TARGET: 1200-1500 words minimum for this scene.
+TARGET: 10,000-12,000 characters minimum for this scene.
 
 ================================================================================
-STEP 7: MERGE AND REVIEW
+STEP 5: MERGE AND REVIEW
 ================================================================================
 Read back through all scenes. Ensure:
 - Transitions between scenes are smooth
@@ -332,7 +310,7 @@ Read back through all scenes. Ensure:
 - Proper paragraph formatting throughout
 
 ================================================================================
-STEP 8: SELF-EDIT FOR CONSISTENCY
+STEP 6: SELF-EDIT FOR CONSISTENCY
 ================================================================================
 Check and fix:
 - Character names and descriptions consistent
@@ -343,11 +321,38 @@ Check and fix:
 - Fix any &quot; or HTML entity issues
 
 ================================================================================
-STEP 9: VERIFY WORD COUNT
+STEP 7: VERIFY CHARACTER COUNT
 ================================================================================
-Count the words in your chapter:
+Count the CHARACTERS in your chapter:
 - Read the entire chapter file
-- Count all words (exclude headers like "Chapter X")
+- Count ALL characters (letters, spaces, punctuation - exclude headers like "Chapter X")
+- Report EXACT character count
+- If under 36,000 characters: ADD MORE CONTENT to reach 36,000+
+- If 36,000-42,000 characters: Good! Proceed to step 8
+- If over 42,000 characters: TRIM carefully while preserving story
+
+Character count is MANDATORY - you must hit 36,000-42,000 characters.
+
+================================================================================
+STEP 8: FINAL FORMAT
+================================================================================
+Ensure the chapter:
+- Has a compelling title
+- Opens with impact
+- Ends with a hook
+- Is properly formatted with paragraphs (blank lines between)
+- Has no placeholder text or [brackets]
+- No HTML entities (&quot; &amp; etc.)
+- Plain text only
+
+CRITICAL FILE RULES:
+- You will be told EXACTLY which chapter number to write and what filename to use.
+- ONLY create or modify the file you are told to work on.
+- Use list_files to see what exists BEFORE writing anything.
+- Use filenames from the novel outline's chapter outline.
+
+After writing, give a brief summary including the FINAL CHARACTER COUNT (do NOT paste the full chapter)"""
+    return Agent(**kwargs)
 - If under 4000 words: ADD MORE CONTENT to reach 4000+
 - If 4000-6000 words: Good! Proceed to step 10
 - If over 6000 words: TRIM carefully while preserving story
@@ -587,14 +592,14 @@ WHEN GIVEN A CHAPTER, create a summary file that includes:
    - Dominant mood
    - Any stylistic choices worth noting
 
-8. WORD COUNT VERIFICATION (when asked)
-   When asked to verify word count:
+8. CHARACTER COUNT VERIFICATION (when asked)
+   When asked to verify character count:
    - Read the entire chapter file
-   - Count ALL words (exclude headers like "Chapter X")
-   - Report EXACT word count
-   - If under 4000: "Chapter is UNDER at X words - needs Y more words"
-   - If 4000-6000: "Chapter is GOOD at X words (within target range)"
-   - If over 6000: "Chapter is OVER at X words - needs to trim Y words"
+   - Count ALL characters (letters, spaces, punctuation - exclude headers)
+   - Report EXACT character count
+   - If under 36,000: "Chapter is UNDER at X characters - needs Y more"
+   - If 36,000-42,000: "Chapter is GOOD at X characters (within target range)"
+   - If over 42,000: "Chapter is OVER at X characters - needs to trim Y characters"
    - Also check for formatting issues (&quot; should be ")
 
 FILE NAMING:

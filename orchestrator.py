@@ -339,26 +339,26 @@ class Orchestrator:
             f"Read '{chapter_file}', fix AI patterns, overwrite '{chapter_file}'.\n"
             f"IMPORTANT: Ensure proper text formatting - no HTML entities like &quot;")
 
-        # --- Step 6: Word Count Verification ---
-        self._log(f"\n  Step 6: Verifying Word Count for Chapter {ch_num}")
+        # --- Step 6: Character Count Verification ---
+        self._log(f"\n  Step 6: Verifying Character Count for Chapter {ch_num}")
         
-        word_count_check = self._run_agent(self.summarizer,
-            f"Read '{chapter_file}' and count the EXACT word count.\n"
-            f"Report: Total word count, is it within 4000-6000 range?\n"
-            f"If under 4000 words, note how many more words are needed.\n"
-            f"If over 6000 words, note how many words to trim.\n"
+        char_count_check = self._run_agent(self.summarizer,
+            f"Read '{chapter_file}' and count the EXACT character count.\n"
+            f"Report: Total character count, is it within 36,000-42,000 range?\n"
+            f"If under 36,000 characters, note how many more characters are needed.\n"
+            f"If over 42,000 characters, note how many characters to trim.\n"
             f"Also check for formatting issues (&quot; should be \")")
 
-        # Log the word count result
-        self._log(f"  Word count check: {word_count_check[:200]}...")
+        # Log the character count result
+        self._log(f"  Character count check: {char_count_check[:200]}...")
         
         # If chapter is too short, expand it
-        if "under 4000" in word_count_check.lower() or "needs" in word_count_check.lower():
+        if "under 36000" in char_count_check.lower() or "needs" in char_count_check.lower():
             self._log(f"  Chapter too short - expanding...")
             expansion = self._run_agent(self.novel_writer,
-                f"Expand '{chapter_file}' to meet 4000-6000 word target.\n"
-                f"{word_count_check}\n\n"
-                f"Read the chapter, add more detail, dialogue, and scenes to reach 4000+ words.\n"
+                f"Expand '{chapter_file}' to meet 36,000-42,000 character target.\n"
+                f"{char_count_check}\n\n"
+                f"Read the chapter, add more detail, dialogue, and scenes to reach 36,000+ characters.\n"
                 f"Overwrite the file when done.")
             self._log(f"  Expansion complete")
 
@@ -467,21 +467,21 @@ class Orchestrator:
             f"Read '{ch1_file}', fix AI patterns, overwrite.\n"
             f"IMPORTANT: Ensure proper text formatting - no HTML entities like &quot;")
 
-        self._log("\n  Phase 8: Word Count Verification")
-        word_count_check = self._run_agent(self.summarizer,
-            f"Read '{ch1_file}' and count the EXACT word count.\n"
-            f"Report: Total word count, is it within 4000-6000 range?\n"
-            f"If under 4000 words, note how many more words are needed.\n"
+        self._log("\n  Phase 8: Character Count Verification")
+        char_count_check = self._run_agent(self.summarizer,
+            f"Read '{ch1_file}' and count the EXACT character count.\n"
+            f"Report: Total character count, is it within 36,000-42,000 range?\n"
+            f"If under 36,000 characters, note how many more characters are needed.\n"
             f"Also check for formatting issues (&quot; should be \")")
         
-        self._log(f"  Word count check: {word_count_check[:200]}...")
+        self._log(f"  Character count check: {char_count_check[:200]}...")
         
-        if "under 4000" in word_count_check.lower() or "needs" in word_count_check.lower():
+        if "under 36000" in char_count_check.lower() or "needs" in char_count_check.lower():
             self._log(f"  Chapter too short - expanding...")
             expansion = self._run_agent(self.novel_writer,
-                f"Expand '{ch1_file}' to meet 4000-6000 word target.\n"
-                f"{word_count_check}\n\n"
-                f"Read the chapter, add more detail, dialogue, and scenes to reach 4000+ words.\n"
+                f"Expand '{ch1_file}' to meet 36,000-42,000 character target.\n"
+                f"{char_count_check}\n\n"
+                f"Read the chapter, add more detail, dialogue, and scenes to reach 36,000+ characters.\n"
                 f"Overwrite the file when done.")
             self._log(f"  Expansion complete")
 
