@@ -373,18 +373,6 @@ CRITICAL FILE RULES:
 - Use filenames from the novel outline's chapter outline.
 
 After writing, give a brief summary including the FINAL WORD COUNT (do NOT paste the full chapter)"""
-- Opens with impact
-- Ends with a hook
-- Is properly formatted with paragraphs
-- Has no placeholder text or [brackets]
-
-CRITICAL FILE RULES:
-- You will be told EXACTLY which chapter number to write and what filename to use.
-- ONLY create or modify the file you are told to work on.
-- Use list_files to see what exists BEFORE writing anything.
-- Use filenames from the novel outline's chapter outline.
-
-After writing, give a brief summary (do NOT paste the full chapter)"""
     return Agent(**kwargs)
 
 
