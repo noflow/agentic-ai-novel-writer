@@ -16,7 +16,7 @@ from tools.web_search import WebSearchTool
 from tools.file_ops import ReadFileTool, WriteFileTool, AppendFileTool, ListFilesTool
 from tools.clock import ClockTool
 from tools.docx_tool import CreateDocxTool, TxtToDocxTool
-from tools.text_stats import CountFileCharsTool, ValidateChapterTool
+from tools.text_stats import CountFileCharsTool, ValidateChapterTool, ValidateChunkTool
 
 
 class ToolRegistry:
@@ -60,4 +60,5 @@ def create_default_registry() -> ToolRegistry:
     registry.register(TxtToDocxTool())
     registry.register(CountFileCharsTool())
     registry.register(ValidateChapterTool())
+    registry.register(ValidateChunkTool())
     return registry
