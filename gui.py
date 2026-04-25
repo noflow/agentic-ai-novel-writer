@@ -631,12 +631,12 @@ class AgenticGUI:
         self.current_mode = mode
         if mode == "single":
             self.selector_label.config(text="Agent:")
-            self.selector_combo.config(values=["assistant", "researcher", "writer", "critic", "story_director", "novel_writer", "story_critic", "humanizer", "summarizer", "formatter", "continuity_checker"])
+            self.selector_combo.config(values=["assistant", "researcher", "writer", "critic", "story_director", "novel_writer", "story_critic", "humanizer", "summarizer", "formatter", "continuity_checker", "story_tracker"])
             self.selector_var.set(self.current_agent_name)
             self._chat_system(f"Single-agent mode. Talking to {self.current_agent_name}.")
         else:
             self.selector_label.config(text="Pipeline:")
-            self.selector_combo.config(values=["research_only", "write_only", "research_and_write", "full_pipeline", "novel_plan", "novel_chapter", "novel_start"])
+            self.selector_combo.config(values=["research_only", "write_only", "research_and_write", "full_pipeline", "novel_plan", "novel_chapter", "novel_start", "write_novel"])
             self.selector_var.set(self.current_pipeline)
             self._chat_system(f"Pipeline mode. Using {self.current_pipeline}.")
         self._log_console(f"Mode: {mode}", "info")
@@ -753,7 +753,7 @@ class AgenticGUI:
             self.current_pipeline = pipeline
             self.mode_var.set("pipeline")
             self.selector_label.config(text="Pipeline:")
-            self.selector_combo.config(values=["research_only", "write_only", "research_and_write", "full_pipeline", "novel_plan", "novel_chapter", "novel_start"])
+            self.selector_combo.config(values=["research_only", "write_only", "research_and_write", "full_pipeline", "novel_plan", "novel_chapter", "novel_start", "write_novel"])
             self.selector_var.set(pipeline)
 
             self._chat_system(f"Sending conversation to {pipeline} pipeline...")

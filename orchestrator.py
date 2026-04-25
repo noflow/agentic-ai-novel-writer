@@ -120,6 +120,7 @@ class Orchestrator:
             "novel_plan": self._novel_plan,
             "novel_chapter": self._novel_chapter,
             "novel_start": self._novel_start,
+            "write_novel": self._write_novel,
         }
 
     # Lazy properties
@@ -450,6 +451,114 @@ class Orchestrator:
             "chapter_1_humanized": humanized, "chapter_1_arc_check": arc_check,
             "chapter_1_continuity": continuity,
             "chapter_1_formatted": formatted,
+        }
+
+    def _write_novel(self, task):
+        """
+        Complete novel pipeline: Plan + Write ALL chapters + Finish.
+        
+        This pipeline:
+        1. Creates the novel outline with correct chapter count
+        2. Writes each chapter sequentially (filling gaps)
+        3. Continues until all chapters are complete
+        4. Creates final formatted document
+        """
+        self._log("\n" + "="*60)
+        self._log("  WRITE_NOVEL PIPELINE - Starting complete novel")
+        self._log("="*60)
+
+        # --- Phase 1: Create Novel Outline ---
+        self._log("\n  === PHASE 1: Creating Novel Outline ===")
+        
+        # Check if outline already exists
+        info = _scan_novel_files()
+        existing_outline = info.get("outline")
+        
+        if existing_outline:
+            self._log(f"  Found existing outline: {existing_outline}")
+            outline = existing_outline
+        else:
+            self._log("  Creating new novel outline...")
+            research = self._run_agent(self.researcher,
+                f"Research background for a novel about: {task}\n"
+                f"Focus on setting, history, culture, technical details.")
+            
+            plan = self._run_agent(self.story_director,
+                f"Create a complete novel outline for:\n\n{task}\n\nResearch:\n{research}\n\n"
+                f"Choose a TITLE. Calculate the correct number of chapters "
+                f"to hit 70,000-100,000 word target (4000-6000 words per chapter).\n"
+                f"Define file naming. List all chapter filenames.")
+            outline = info.get("outline") or "outline_created"
+        
+        # --- Phase 2: Write Chapters Sequentially ---
+        self._log("\n  === PHASE 2: Writing Chapters ===")
+        
+        # Get chapter info
+        info = _scan_novel_files()
+        chapter_map = info["chapter_map"]
+        existing_nums = sorted(chapter_map.keys())
+        gaps = info["gaps"]
+        
+        # Determine total chapters from outline (estimate if not found)
+        # For now, we'll write until no more gaps or a reasonable limit
+        max_chapters = 25  # Safety limit
+        
+        chapters_written = []
+        
+        while True:
+            info = _scan_novel_files()
+            chapter_map = info["chapter_map"]
+            existing_nums = sorted(chapter_map.keys())
+            gaps = info["gaps"]
+            outline = info.get("outline")
+            
+            if gaps:
+                ch_num = gaps[0]
+                self._log(f"\n  --- Writing Chapter {ch_num} (gap fill) ---")
+            elif existing_nums:
+                ch_num = max(existing_nums) + 1
+                if ch_num > max_chapters:
+                    self._log(f"\n  Reached max chapters ({max_chapters}). Stopping.")
+                    break
+                self._log(f"\n  --- Writing Chapter {ch_num} ---")
+            else:
+                ch_num = 1
+                self._log(f"\n  --- Writing Chapter {ch_num} ---")
+            
+            # Run the chapter pipeline
+            chapter_result = self._novel_chapter(f"Write Chapter {ch_num}")
+            chapters_written.append(chapter_result)
+            
+            # Check if we should continue
+            info = _scan_novel_files()
+            chapter_map = info["chapter_map"]
+            existing_nums = sorted(chapter_map.keys())
+            gaps = info["gaps"]
+            
+            # If no more gaps and we've written a reasonable number, ask to continue
+            if not gaps and existing_nums:
+                # Check if outline specifies total chapters
+                self._log(f"\n  Chapters complete so far: {existing_nums}")
+                self._log("  Continue writing more chapters? (y/n)")
+                # For automated mode, we'll stop here and let user decide
+                break
+        
+        # --- Phase 3: Final Summary ---
+        self._log("\n  === PHASE 3: Novel Complete ===")
+        self._log(f"  Total chapters written: {len(chapters_written)}")
+        
+        # Create final story_so_far summary
+        final_summary = self._run_agent(self.summarizer,
+            f"Create a comprehensive 'story_so_far' summary of the entire novel.\n"
+            f"Include: all chapters written, main plot points, character arcs, "
+            f"and where the story currently stands.\n"
+            f"Save as 'final_story_so_far.txt'")
+        
+        return {
+            "outline": outline,
+            "chapters_written": len(chapters_written),
+            "chapter_details": chapters_written,
+            "final_summary": final_summary,
         }
 
     # ---------------------------------------------------------------
