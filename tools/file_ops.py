@@ -82,7 +82,6 @@ class ReadFileTool(BaseTool):
             with open(resolved, "r", encoding="utf-8") as f:
                 content = f.read()
 
-
             return content
 
         except PermissionError:
@@ -206,8 +205,9 @@ class AppendFileTool(BaseTool):
             with open(resolved, "a", encoding="utf-8") as f:
                 f.write(content)
 
-            # Report total file size
-            total_size = os.path.getsize(resolved)
+            # Report total file size in characters, not bytes.
+            with open(resolved, "r", encoding="utf-8") as f:
+                total_size = len(f.read())
             return (
                 f"Appended {len(content)} characters to: {resolved}\n"
                 f"Total file size: {total_size} characters"

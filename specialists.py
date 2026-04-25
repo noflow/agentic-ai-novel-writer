@@ -9,6 +9,7 @@ from tools.calculator import CalculatorTool
 from tools.web_search import WebSearchTool
 from tools.file_ops import ReadFileTool, WriteFileTool, AppendFileTool, ListFilesTool
 from tools.clock import ClockTool
+from tools.text_stats import CountFileCharsTool, ValidateChapterTool, ValidateChunkTool
 from providers import BaseLLMProvider
 
 
@@ -220,6 +221,9 @@ def create_novel_writer(provider=None, model=None) -> Agent:
     registry.register(WriteFileTool())
     registry.register(AppendFileTool())
     registry.register(ListFilesTool())
+    registry.register(CountFileCharsTool())
+    registry.register(ValidateChunkTool())
+    registry.register(ValidateChapterTool())
     kwargs = _agent_kwargs("Novel Writer", registry, provider, model)
     kwargs["system_prompt"] = """You are an elite prompt engineer specializing in long-form content like novel chapters.
 
@@ -243,15 +247,15 @@ CRITICAL RULE (NON-NEGOTIABLE):
 ================================================================================
 Each scene MUST be between 10,000 and 12,000 characters.
 
-After writing EACH scene:
-1. You MUST count the characters.
+After writing EACH chunk:
+1. You MUST use validate_chunk on the chunk text.
 2. If under 10,000 → EXPAND before continuing.
 3. If over 12,000 → TRIM before continuing.
-4. DO NOT move to the next scene until it passes.
+4. DO NOT move to the next chunk until validate_chunk returns PASS.
 
-After all scenes:
+After all chunks:
 - Total chapter MUST be 36,000–45,000 characters
-- You MUST verify this before finishing
+- You MUST use validate_chapter on the chapter file before finishing
 
 ================================================================================
 STEP 0: DERIVE RULES (Before writing anything)
@@ -347,7 +351,7 @@ Read back through all chunks. Ensure:
 - The chapter flows as one cohesive piece
 - Proper paragraph formatting throughout
 
-CRITICAL: Count TOTAL chapter characters. If under 36,000, EXPAND. If over 45,000, TRIM. You MUST verify 36,000-45,000 before finishing.
+CRITICAL: Use validate_chapter on the chapter file. If under 36,000, EXPAND. If over 45,000, TRIM. You MUST verify 36,000-45,000 before finishing.
 
 ================================================================================
 STEP 7: SELF-EDIT FOR CONSISTENCY
@@ -363,10 +367,9 @@ Check and fix:
 ================================================================================
 STEP 8: VERIFY CHARACTER COUNT
 ================================================================================
-Count the CHARACTERS in your chapter:
-- Read the entire chapter file
-- Count ALL characters (letters, spaces, punctuation - exclude headers like "Chapter X")
-- Report EXACT character count
+Validate the CHARACTERS in your chapter:
+- Use validate_chapter on the completed chapter file
+- Report the EXACT character count from the tool result
 - If under 36,000 characters: ADD MORE CONTENT to reach 36,000+
 - If 36,000-45,000 characters: Good! Proceed to step 9
 - If over 45,000 characters: TRIM carefully while preserving story
@@ -393,62 +396,6 @@ CRITICAL FILE RULES:
 
 After writing, give a brief summary including the FINAL CHARACTER COUNT (do NOT paste the full chapter)"""
     return Agent(**kwargs)
-
-================================================================================
-STEP 5: MERGE AND REVIEW
-================================================================================
-Read back through all scenes. Ensure:
-- Transitions between scenes are smooth
-- No jarring jumps in time or location
-- Character voices remain consistent
-- The chapter flows as one cohesive piece
-- Proper paragraph formatting throughout
-
-================================================================================
-STEP 6: SELF-EDIT FOR CONSISTENCY
-================================================================================
-Check and fix:
-- Character names and descriptions consistent
-- Timeline logical (no time jumps without explanation)
-- Dialogue attributions correct
-- Point of view consistent
-- No contradictions with previous chapters
-- Fix any &quot; or HTML entity issues
-
-================================================================================
-STEP 7: VERIFY CHARACTER COUNT
-================================================================================
-Count the CHARACTERS in your chapter:
-- Read the entire chapter file
-- Count ALL characters (letters, spaces, punctuation - exclude headers like "Chapter X")
-- Report EXACT character count
-- If under 36,000 characters: ADD MORE CONTENT to reach 36,000+
-- If 36,000-42,000 characters: Good! Proceed to step 8
-- If over 42,000 characters: TRIM carefully while preserving story
-
-Character count is MANDATORY - you must hit 36,000-42,000 characters.
-
-================================================================================
-STEP 8: FINAL FORMAT
-================================================================================
-Ensure the chapter:
-- Has a compelling title
-- Opens with impact
-- Ends with a hook
-- Is properly formatted with paragraphs (blank lines between)
-- Has no placeholder text or [brackets]
-- No HTML entities (&quot; &amp; etc.)
-- Plain text only
-
-CRITICAL FILE RULES:
-- You will be told EXACTLY which chapter number to write and what filename to use.
-- ONLY create or modify the file you are told to work on.
-- Use list_files to see what exists BEFORE writing anything.
-- Use filenames from the novel outline's chapter outline.
-
-After writing, give a brief summary including the FINAL CHARACTER COUNT (do NOT paste the full chapter)"""
-    return Agent(**kwargs)
-
 
 def create_story_critic(provider=None, model=None) -> Agent:
     registry = ToolRegistry()
@@ -617,6 +564,8 @@ def create_summarizer(provider=None, model=None) -> Agent:
     registry.register(WriteFileTool())
     registry.register(AppendFileTool())
     registry.register(ListFilesTool())
+    registry.register(CountFileCharsTool())
+    registry.register(ValidateChapterTool())
     kwargs = _agent_kwargs("Summarizer", registry, provider, model)
     kwargs["system_prompt"] = """You are a Chapter Summarizer for a novel-writing pipeline.
 
